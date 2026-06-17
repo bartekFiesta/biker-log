@@ -54,15 +54,16 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             archive
 
-          xcodebuild \
-            -exportArchive \
-            -archivePath build/BikerLog.xcarchive \
-            -exportPath build/output \
-            -exportOptionsPlist ../scripts/ExportOptions.plist
+          APP_PATH=$(find build/BikerLog.xcarchive/Products/Applications -maxdepth 1 -name "*.app" | head -1)
+          mkdir -p build/output/Payload
+          cp -R "$APP_PATH" build/output/Payload/
+          cd build/output
+          zip -r BikerLog.ipa Payload
+          rm -rf Payload
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: BikerLog-iOS
-          path: ios/build/output/*.ipa
+          path: ios/build/output/BikerLog.ipa
           retention-days: 7
