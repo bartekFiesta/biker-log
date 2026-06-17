@@ -62,7 +62,14 @@ export default function DashboardScreen() {
       getServiceReminderRules(),
     ]);
     const odometer = await getLatestOdometer();
-    const fuelStatus = computeFuelStatus(bike.tank_capacity_l, refuelings, rides, odometer);
+    const fuelStatus = computeFuelStatus(
+      bike.tank_capacity_l,
+      refuelings,
+      rides,
+      odometer,
+      bike.default_consumption_l_per_100km,
+      bike.baseline_odometer_km
+    );
     const reminderList = computeServiceReminders(rules, services, odometer);
     setReminders(reminderList);
     void refreshServiceNotifications(rules, services, odometer);
@@ -99,9 +106,15 @@ export default function DashboardScreen() {
           : '—',
       tankCapacity: formatVolume(bike.tank_capacity_l, settings.volume_unit),
       sampleHint:
-        fuelStatus.sample_count > 0
-          ? `Based on ${fuelStatus.sample_count} full-tank refuelings`
-          : 'Add 2 full-tank refuelings to calculate consumption',
+        fuelStatus.consumption_source === 'measured'
+          ? fuelStatus.gps_assisted_sample_count > 0
+            ? `Measured from ${fuelStatus.sample_count} full-tank refuelings (odometer + GPS)`
+            : `Measured from ${fuelStatus.sample_count} full-tank refuelings`
+          : fuelStatus.consumption_source === 'default'
+            ? fuelStatus.sample_count > 0
+              ? `Default consumption until more full-tank data (${fuelStatus.sample_count}/2 samples)`
+              : 'Default consumption — add full-tank refuelings to calibrate'
+            : 'Set average consumption in Settings',
       lastRefuel: lastRefuel
         ? `${formatDate(lastRefuel.date)} · ${formatVolume(lastRefuel.liters, settings.volume_unit)}`
         : 'No refuelings yet',

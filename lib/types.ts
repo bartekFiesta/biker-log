@@ -15,6 +15,8 @@ export interface Bike {
   tank_capacity_l: number;
   reserve_threshold_l: number;
   baseline_odometer_km: number | null;
+  /** Used until consumption is calculated from two full-tank refuelings. */
+  default_consumption_l_per_100km: number | null;
 }
 
 export interface Settings {
@@ -128,19 +130,27 @@ export interface FuelTriplet {
   price_per_liter: number | null;
 }
 
+export type TravelDistanceSource = 'odometer' | 'gps' | 'combined';
+
 export interface ConsumptionSample {
   consumption_l_per_100km: number;
   distance_km: number;
   date: string;
+  distance_source: TravelDistanceSource;
 }
+
+export type ConsumptionSource = 'measured' | 'default';
 
 export interface FuelStatus {
   avg_consumption_l_per_100km: number | null;
+  consumption_source: ConsumptionSource | null;
   sample_count: number;
+  gps_assisted_sample_count: number;
   fuel_remaining_l: number | null;
   fuel_remaining_pct: number | null;
   km_to_empty: number | null;
   distance_since_last_fill_km: number;
+  distance_since_last_fill_source: TravelDistanceSource | null;
 }
 
 export interface ChartPoint {

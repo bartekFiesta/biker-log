@@ -16,6 +16,7 @@ export default function OnboardingScreen() {
   const [bikeName, setBikeName] = useState('My motorcycle');
   const [tankCapacity, setTankCapacity] = useState('');
   const [odometer, setOdometer] = useState('');
+  const [consumption, setConsumption] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [saving, setSaving] = useState(false);
 
@@ -32,12 +33,19 @@ export default function OnboardingScreen() {
       return;
     }
 
+    const consumptionValue = Number(consumption.replace(',', '.'));
+    if (!Number.isFinite(consumptionValue) || consumptionValue <= 0) {
+      Alert.alert('Required', 'Enter your average fuel consumption (e.g. 5.5 L/100 km).');
+      return;
+    }
+
     setSaving(true);
     await completeOnboarding(
       bikeName.trim() || 'My motorcycle',
       tank,
       normalizeCurrency(currency),
-      odometerValue
+      odometerValue,
+      consumptionValue
     );
     setSaving(false);
     refresh();
@@ -56,6 +64,14 @@ export default function OnboardingScreen() {
         onChangeText={setTankCapacity}
         keyboardType="decimal-pad"
         placeholder="e.g. 17"
+      />
+      <Field
+        label="Average fuel consumption (L/100 km) *"
+        value={consumption}
+        onChangeText={setConsumption}
+        keyboardType="decimal-pad"
+        placeholder="e.g. 5.5"
+        hint="Used to estimate fuel in the tank until two full-tank refuelings are logged."
       />
       <Field
         label="Current odometer (km, optional)"

@@ -38,6 +38,7 @@ export default function SettingsScreen() {
   const { refreshKey, refresh } = useDatabase();
   const [bikeName, setBikeName] = useState('');
   const [tankCapacity, setTankCapacity] = useState('17');
+  const [defaultConsumption, setDefaultConsumption] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [reserveThreshold, setReserveThreshold] = useState('2.5');
   const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>('km');
@@ -58,6 +59,9 @@ export default function SettingsScreen() {
     ]);
     setBikeName(bike.name);
     setTankCapacity(String(bike.tank_capacity_l));
+    setDefaultConsumption(
+      bike.default_consumption_l_per_100km != null ? String(bike.default_consumption_l_per_100km) : ''
+    );
     setCurrency(settings.currency);
     setReserveThreshold(String(bike.reserve_threshold_l));
     setDistanceUnit(settings.distance_unit);
@@ -92,6 +96,16 @@ export default function SettingsScreen() {
       Alert.alert('Error', 'Enter a valid reserve threshold.');
       return;
     }
+    const consumptionValue = defaultConsumption.trim()
+      ? Number(defaultConsumption.replace(',', '.'))
+      : null;
+    if (
+      defaultConsumption.trim() &&
+      (!Number.isFinite(consumptionValue) || consumptionValue! <= 0)
+    ) {
+      Alert.alert('Error', 'Enter a valid average consumption (L/100 km).');
+      return;
+    }
     if (!currency.trim() || normalizeCurrency(currency).length < 3) {
       Alert.alert('Error', 'Choose a currency (e.g. USD).');
       return;
@@ -103,6 +117,7 @@ export default function SettingsScreen() {
       name: bikeName.trim() || bike.name,
       tank_capacity_l: tank,
       reserve_threshold_l: reserve,
+      default_consumption_l_per_100km: consumptionValue,
     });
     await updateSettings({
       currency: normalizeCurrency(currency),
@@ -172,6 +187,14 @@ export default function SettingsScreen() {
         onChangeText={setTankCapacity}
         keyboardType="decimal-pad"
         placeholder="e.g. 17"
+      />
+      <Field
+        label="Average consumption (L/100 km)"
+        value={defaultConsumption}
+        onChangeText={setDefaultConsumption}
+        keyboardType="decimal-pad"
+        placeholder="e.g. 5.5"
+        hint="Used for fuel level estimates until two full-tank refuelings are logged."
       />
       <Field
         label="Reserve threshold (liters)"

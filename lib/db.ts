@@ -80,8 +80,16 @@ async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   await migrateSettingsTable(db);
   await migrateServiceReminderRules(db);
   await migrateMultiBike(db);
+  await migrateBikeConsumption(db);
 
   return db;
+}
+
+async function migrateBikeConsumption(db: SQLite.SQLiteDatabase): Promise<void> {
+  const cols = await db.getAllAsync<{ name: string }>('PRAGMA table_info(bikes)');
+  if (!cols.some((column) => column.name === 'default_consumption_l_per_100km')) {
+    await db.execAsync('ALTER TABLE bikes ADD COLUMN default_consumption_l_per_100km REAL');
+  }
 }
 
 async function migrateSettingsTable(db: SQLite.SQLiteDatabase): Promise<void> {
@@ -215,6 +223,7 @@ function mapBike(row: Record<string, unknown>): Bike {
     tank_capacity_l: row.tank_capacity_l as number,
     reserve_threshold_l: row.reserve_threshold_l as number,
     baseline_odometer_km: (row.baseline_odometer_km as number | null) ?? null,
+    default_consumption_l_per_100km: (row.default_consumption_l_per_100km as number | null) ?? null,
   };
 }
 
@@ -313,11 +322,13 @@ export async function addBike(
 ): Promise<Bike> {
   const db = await getDatabase();
   const result = await db.runAsync(
-    `INSERT INTO bikes (name, tank_capacity_l, reserve_threshold_l, baseline_odometer_km) VALUES (?, ?, ?, ?)`,
+    `INSERT INTO bikes (name, tank_capacity_l, reserve_threshold_l, baseline_odometer_km, default_consumption_l_per_100km)
+     VALUES (?, ?, ?, ?, ?)`,
     data.name,
     data.tank_capacity_l,
     data.reserve_threshold_l,
-    data.baseline_odometer_km
+    data.baseline_odometer_km,
+    data.default_consumption_l_per_100km ?? null
   );
   return { id: result.lastInsertRowId, ...data };
 }
@@ -328,11 +339,13 @@ export async function updateBike(id: number, partial: Partial<Omit<Bike, 'id'>>)
   const next = { ...current, ...partial };
   const db = await getDatabase();
   await db.runAsync(
-    `UPDATE bikes SET name = ?, tank_capacity_l = ?, reserve_threshold_l = ?, baseline_odometer_km = ? WHERE id = ?`,
+    `UPDATE bikes SET name = ?, tank_capacity_l = ?, reserve_threshold_l = ?, baseline_odometer_km = ?,
+     default_consumption_l_per_100km = ? WHERE id = ?`,
     next.name,
     next.tank_capacity_l,
     next.reserve_threshold_l,
     next.baseline_odometer_km,
+    next.default_consumption_l_per_100km,
     id
   );
   return next;
@@ -663,13 +676,15 @@ export async function completeOnboarding(
   bikeName: string,
   tankCapacityL: number,
   currency: string,
-  baselineOdometer: number | null
+  baselineOdometer: number | null,
+  defaultConsumptionLPer100km: number
 ): Promise<void> {
   await updateBike(1, {
     name: bikeName,
     tank_capacity_l: tankCapacityL,
     reserve_threshold_l: Math.max(1, tankCapacityL * 0.15),
     baseline_odometer_km: baselineOdometer,
+    default_consumption_l_per_100km: defaultConsumptionLPer100km,
   });
   await updateSettings({
     active_bike_id: 1,

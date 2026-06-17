@@ -60,6 +60,7 @@ export default function BikesScreen() {
       tank_capacity_l: tank,
       reserve_threshold_l: Math.max(1, tank * 0.15),
       baseline_odometer_km: null,
+      default_consumption_l_per_100km: null,
     });
     await setActiveBike(bike.id);
     setNewName('');

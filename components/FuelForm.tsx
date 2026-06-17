@@ -95,8 +95,8 @@ export default function FuelForm({
           <Text style={styles.infoText}>
             {isFullTank
               ? tankCapacityL != null
-                ? `Tank treated as full (${formatNumber(tankCapacityL, 1)} L from settings). Used to calculate consumption — you need two consecutive full-tank refuelings with odometer readings.`
-                : 'Tank treated as full. Used to calculate consumption — you need two consecutive full-tank refuelings with odometer readings.'
+                ? `Tank treated as full (${formatNumber(tankCapacityL, 1)} L from settings). Consumption uses odometer between refuelings; GPS rides fill gaps when the odometer was not updated.`
+                : 'Tank treated as full. Consumption uses odometer between refuelings; GPS rides fill gaps when the odometer was not updated.'
               : 'You added only some fuel. Enter the actual liters added. Does not reset consumption tracking — only estimates how much fuel is in the tank.'}
           </Text>
         </View>
