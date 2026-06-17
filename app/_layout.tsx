@@ -7,6 +7,7 @@ import 'react-native-reanimated';
 
 import { DatabaseProvider } from '@/lib/database-context';
 import Colors from '@/constants/Colors';
+import { I18nProvider, useI18n } from '@/lib/i18n/context';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -34,6 +35,47 @@ const darkTheme = {
   },
 };
 
+function RootNavigation() {
+  const { t } = useI18n();
+
+  return (
+    <>
+      <StatusBar style="light" />
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: Colors.dark.card },
+          headerTintColor: Colors.dark.text,
+        }}>
+        <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="ride/[id]" options={{ title: t('screens.rideDetails') }} />
+        <Stack.Screen
+          name="ride/active"
+          options={{ title: t('screens.activeRide'), headerBackVisible: false }}
+        />
+        <Stack.Screen
+          name="fuel/add"
+          options={{ title: t('screens.addRefueling'), presentation: 'modal' }}
+        />
+        <Stack.Screen
+          name="fuel/[id]"
+          options={{ title: t('screens.editRefueling'), presentation: 'modal' }}
+        />
+        <Stack.Screen
+          name="service/add"
+          options={{ title: t('screens.addService'), presentation: 'modal' }}
+        />
+        <Stack.Screen
+          name="service/[id]"
+          options={{ title: t('screens.editService'), presentation: 'modal' }}
+        />
+        <Stack.Screen name="ride/edit/[id]" options={{ title: t('screens.editRide') }} />
+        <Stack.Screen name="bikes/index" options={{ title: t('screens.motorcycles') }} />
+      </Stack>
+    </>
+  );
+}
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
@@ -55,21 +97,11 @@ export default function RootLayout() {
 
   return (
     <DatabaseProvider>
-      <ThemeProvider value={darkTheme}>
-      <StatusBar style="light" />
-      <Stack screenOptions={{ headerStyle: { backgroundColor: Colors.dark.card }, headerTintColor: Colors.dark.text }}>
-        <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="ride/[id]" options={{ title: 'Ride details' }} />
-        <Stack.Screen name="ride/active" options={{ title: 'Active ride', headerBackVisible: false }} />
-        <Stack.Screen name="fuel/add" options={{ title: 'Add refueling', presentation: 'modal' }} />
-        <Stack.Screen name="fuel/[id]" options={{ title: 'Edit refueling', presentation: 'modal' }} />
-        <Stack.Screen name="service/add" options={{ title: 'Add service', presentation: 'modal' }} />
-        <Stack.Screen name="service/[id]" options={{ title: 'Edit service', presentation: 'modal' }} />
-        <Stack.Screen name="ride/edit/[id]" options={{ title: 'Edit ride' }} />
-        <Stack.Screen name="bikes/index" options={{ title: 'Motorcycles' }} />
-      </Stack>
-      </ThemeProvider>
+      <I18nProvider>
+        <ThemeProvider value={darkTheme}>
+          <RootNavigation />
+        </ThemeProvider>
+      </I18nProvider>
     </DatabaseProvider>
   );
 }

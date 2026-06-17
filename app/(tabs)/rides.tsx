@@ -8,6 +8,7 @@ import Colors from '@/constants/Colors';
 import { deleteRide, getRides, getSettings } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
 import { formatDateTime, formatDuration } from '@/lib/format';
+import { useI18n } from '@/lib/i18n/context';
 import { formatDistance } from '@/lib/units';
 import { rideTracker } from '@/lib/ride-tracker';
 import type { Ride } from '@/lib/types';
@@ -15,11 +16,10 @@ import type { Ride } from '@/lib/types';
 export default function RidesScreen() {
   const router = useRouter();
   const { refreshKey, refresh } = useDatabase();
+  const { t } = useI18n();
   const [rides, setRides] = useState<Ride[]>([]);
   const [activeRide, setActiveRide] = useState(false);
-
   const [activeRidePaused, setActiveRidePaused] = useState(false);
-
   const [distanceUnit, setDistanceUnit] = useState<'km' | 'mi'>('km');
 
   const load = useCallback(async () => {
@@ -37,10 +37,10 @@ export default function RidesScreen() {
   );
 
   const handleDelete = (ride: Ride) => {
-    Alert.alert('Delete ride', 'Are you sure you want to delete this ride?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('rides.deleteTitle'), t('rides.deleteMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           await deleteRide(ride.id);
@@ -55,13 +55,13 @@ export default function RidesScreen() {
       {activeRide ? (
         <View style={styles.banner}>
           <Text style={styles.bannerText}>
-            {activeRidePaused ? 'Ride paused — tap Open to resume' : 'Recording route — tap Open'}
+            {activeRidePaused ? t('rides.pausedBanner') : t('rides.recordingBanner')}
           </Text>
-          <PrimaryButton label="Open" onPress={() => router.push('/ride/active')} />
+          <PrimaryButton label={t('common.open')} onPress={() => router.push('/ride/active')} />
         </View>
       ) : (
         <View style={styles.header}>
-          <PrimaryButton label="Start ride" onPress={() => router.push('/ride/active')} />
+          <PrimaryButton label={t('rides.startRide')} onPress={() => router.push('/ride/active')} />
         </View>
       )}
 
@@ -69,7 +69,7 @@ export default function RidesScreen() {
         data={rides}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
-        ListEmptyComponent={<Text style={styles.empty}>No saved rides yet.</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{t('rides.empty')}</Text>}
         renderItem={({ item }) => (
           <Pressable
             style={styles.card}
@@ -84,7 +84,9 @@ export default function RidesScreen() {
             </Text>
             {item.odometer_end != null ? (
               <Text style={styles.cardMeta}>
-                Odometer: {formatDistance(item.odometer_end, distanceUnit, 0)}
+                {t('rides.odometer', {
+                  value: formatDistance(item.odometer_end, distanceUnit, 0),
+                })}
               </Text>
             ) : null}
           </Pressable>

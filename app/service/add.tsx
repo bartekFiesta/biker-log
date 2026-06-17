@@ -6,11 +6,13 @@ import PrimaryButton from '@/components/PrimaryButton';
 import ServiceForm from '@/components/ServiceForm';
 import { addServiceRecord, getLatestOdometer } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
+import { useI18n } from '@/lib/i18n/context';
 import type { ServiceType } from '@/lib/types';
 
 export default function AddServiceScreen() {
   const router = useRouter();
   const { refresh } = useDatabase();
+  const { t } = useI18n();
   const [type, setType] = useState<ServiceType>('oil');
   const [odometer, setOdometer] = useState('');
   const [notes, setNotes] = useState('');
@@ -26,7 +28,7 @@ export default function AddServiceScreen() {
   const handleSave = async () => {
     const odometerValue = Number(odometer.replace(',', '.'));
     if (!Number.isFinite(odometerValue) || odometerValue <= 0) {
-      Alert.alert('Error', 'Enter a valid odometer reading.');
+      Alert.alert(t('common.error'), t('service.odometerInvalid'));
       return;
     }
 
@@ -52,7 +54,11 @@ export default function AddServiceScreen() {
         onOdometerChange={setOdometer}
         onNotesChange={setNotes}
       />
-      <PrimaryButton label={saving ? 'Saving...' : 'Save service'} onPress={handleSave} disabled={saving} />
+      <PrimaryButton
+        label={saving ? t('common.saving') : t('service.save')}
+        onPress={handleSave}
+        disabled={saving}
+      />
     </ScrollView>
   );
 }

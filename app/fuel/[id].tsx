@@ -8,11 +8,13 @@ import Colors from '@/constants/Colors';
 import { getActiveBike, getRefueling, getSettings, updateRefueling } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
 import { resolveFuelTriplet } from '@/lib/fuel-calculations';
+import { useI18n } from '@/lib/i18n/context';
 
 export default function EditFuelScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { refresh } = useDatabase();
+  const { t } = useI18n();
   const [liters, setLiters] = useState('');
   const [totalPrice, setTotalPrice] = useState('');
   const [pricePerLiter, setPricePerLiter] = useState('');
@@ -34,7 +36,7 @@ export default function EditFuelScreen() {
         getActiveBike(),
       ]);
       if (!refueling) {
-        Alert.alert('Not found', 'Refueling entry not found.');
+        Alert.alert(t('common.notFound'), t('fuel.notFound'));
         router.back();
         return;
       }
@@ -48,13 +50,13 @@ export default function EditFuelScreen() {
       setOdometer(String(Math.round(refueling.odometer_km)));
       setIsFullTank(refueling.is_full_tank);
     })();
-  }, [id, router]);
+  }, [id, router, t]);
 
   const handleSave = async () => {
     const refuelId = Number(id);
     const odometerValue = Number(odometer.replace(',', '.'));
     if (!Number.isFinite(odometerValue) || odometerValue <= 0) {
-      Alert.alert('Error', 'Enter a valid odometer reading.');
+      Alert.alert(t('common.error'), t('fuel.odometerInvalid'));
       return;
     }
 
@@ -65,7 +67,7 @@ export default function EditFuelScreen() {
     });
 
     if (!resolved || resolved.liters == null || resolved.total_price == null || resolved.price_per_liter == null) {
-      Alert.alert('Error', 'Enter at least 2 of 3 values: liters, total price, or price per liter.');
+      Alert.alert(t('common.error'), t('fuel.valuesInvalid'));
       return;
     }
 
@@ -100,7 +102,11 @@ export default function EditFuelScreen() {
         currency={currency}
         tankCapacityL={tankCapacityL}
       />
-      <PrimaryButton label={saving ? 'Saving...' : 'Save changes'} onPress={handleSave} disabled={saving} />
+      <PrimaryButton
+        label={saving ? t('common.saving') : t('fuel.saveChanges')}
+        onPress={handleSave}
+        disabled={saving}
+      />
     </ScrollView>
   );
 }

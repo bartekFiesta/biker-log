@@ -14,16 +14,18 @@ import {
 import { getRefuelings, getRides, getSettings } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
 import { formatCurrency } from '@/lib/format';
+import { useI18n } from '@/lib/i18n/context';
 import { computeAllPeriodStats } from '@/lib/statistics';
 import { formatDistance, formatVolume } from '@/lib/units';
 import type { DistanceUnit, VolumeUnit } from '@/lib/types';
 
 export default function StatsScreen() {
   const { refreshKey } = useDatabase();
+  const { t, language } = useI18n();
   const [currency, setCurrency] = useState('USD');
   const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>('km');
   const [volumeUnit, setVolumeUnit] = useState<VolumeUnit>('L');
-  const [periods, setPeriods] = useState(() => computeAllPeriodStats([], []));
+  const [periods, setPeriods] = useState(() => computeAllPeriodStats([], [], undefined, language));
   const [distanceChart, setDistanceChart] = useState<{ label: string; value: number }[]>([]);
   const [fuelChart, setFuelChart] = useState<{ label: string; value: number }[]>([]);
   const [spendChart, setSpendChart] = useState<{ label: string; value: number }[]>([]);
@@ -37,11 +39,11 @@ export default function StatsScreen() {
     setCurrency(settings.currency);
     setDistanceUnit(settings.distance_unit);
     setVolumeUnit(settings.volume_unit);
-    setPeriods(computeAllPeriodStats(rides, refuelings));
+    setPeriods(computeAllPeriodStats(rides, refuelings, undefined, language));
     setDistanceChart(buildMonthlyDistanceChart(rides));
     setFuelChart(buildMonthlyFuelChart(refuelings));
     setSpendChart(buildMonthlySpendChart(refuelings));
-  }, [refreshKey]);
+  }, [refreshKey, language]);
 
   useFocusEffect(
     useCallback(() => {
@@ -51,8 +53,8 @@ export default function StatsScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>Statistics</Text>
-      <Text style={styles.subheading}>Rides and fuel — week, month, year</Text>
+      <Text style={styles.heading}>{t('stats.title')}</Text>
+      <Text style={styles.subheading}>{t('stats.subtitle')}</Text>
 
       {periods.map((period) => (
         <PeriodStatsCard
@@ -65,17 +67,17 @@ export default function StatsScreen() {
       ))}
 
       <SimpleBarChart
-        title="Monthly distance"
+        title={t('stats.chartDistance')}
         data={distanceChart}
         formatValue={(value) => formatDistance(value, distanceUnit)}
       />
       <SimpleBarChart
-        title="Monthly fuel used"
+        title={t('stats.chartFuel')}
         data={fuelChart}
         formatValue={(value) => formatVolume(value, volumeUnit)}
       />
       <SimpleBarChart
-        title="Monthly fuel spend"
+        title={t('stats.chartSpend')}
         data={spendChart}
         formatValue={(value) => formatCurrency(value, currency)}
       />

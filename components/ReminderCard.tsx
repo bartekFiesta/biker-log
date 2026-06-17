@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
+import { useI18n } from '@/lib/i18n/context';
 import type { ServiceReminderStatus } from '@/lib/types';
 
 interface ReminderCardProps {
@@ -31,11 +32,12 @@ interface ReminderListProps {
 }
 
 export function ReminderList({ reminders }: ReminderListProps) {
+  const { t } = useI18n();
   const actionable = reminders.filter((item) => item.level !== 'ok');
   if (actionable.length === 0) {
     return (
       <View style={styles.okBox}>
-        <Text style={styles.okText}>All service reminders up to date</Text>
+        <Text style={styles.okText}>{t('reminders.allUpToDate')}</Text>
       </View>
     );
   }
@@ -57,6 +59,8 @@ interface ToggleRowProps {
 }
 
 export function ToggleRow({ label, value, onChange, hint }: ToggleRowProps) {
+  const { t } = useI18n();
+
   return (
     <View style={styles.toggleBlock}>
       <Text style={styles.toggleLabel}>{label}</Text>
@@ -65,12 +69,16 @@ export function ToggleRow({ label, value, onChange, hint }: ToggleRowProps) {
         <Pressable
           style={[styles.toggleButton, value && styles.toggleButtonActive]}
           onPress={() => onChange(true)}>
-          <Text style={[styles.toggleButtonText, value && styles.toggleButtonTextActive]}>On</Text>
+          <Text style={[styles.toggleButtonText, value && styles.toggleButtonTextActive]}>
+            {t('common.on')}
+          </Text>
         </Pressable>
         <Pressable
           style={[styles.toggleButton, !value && styles.toggleButtonActive]}
           onPress={() => onChange(false)}>
-          <Text style={[styles.toggleButtonText, !value && styles.toggleButtonTextActive]}>Off</Text>
+          <Text style={[styles.toggleButtonText, !value && styles.toggleButtonTextActive]}>
+            {t('common.off')}
+          </Text>
         </Pressable>
       </View>
     </View>

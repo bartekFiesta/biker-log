@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import PrimaryButton from '@/components/PrimaryButton';
 import { ReminderList } from '@/components/ReminderCard';
@@ -20,6 +20,7 @@ import {
 import { useDatabase } from '@/lib/database-context';
 import { computeFuelStatus } from '@/lib/fuel-calculations';
 import { formatDate, formatDateTime } from '@/lib/format';
+import { useI18n } from '@/lib/i18n/context';
 import { refreshServiceNotifications } from '@/lib/notifications';
 import { rideTracker } from '@/lib/ride-tracker';
 import { computeServiceReminders } from '@/lib/service-reminders';
@@ -28,11 +29,12 @@ import {
   formatDistance,
   formatVolume,
 } from '@/lib/units';
-import { SERVICE_TYPE_LABELS, type ServiceReminderStatus } from '@/lib/types';
+import type { ServiceReminderStatus } from '@/lib/types';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const { refreshKey } = useDatabase();
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [activeRide, setActiveRide] = useState(false);
   const [activeRidePaused, setActiveRidePaused] = useState(false);
@@ -46,8 +48,8 @@ export default function DashboardScreen() {
     kmToEmpty: '—',
     tankCapacity: '—',
     sampleHint: '',
-    lastRefuel: 'No refuelings yet',
-    lastService: 'No service records',
+    lastRefuel: '',
+    lastService: '',
     lowFuel: false,
   });
 
@@ -70,7 +72,7 @@ export default function DashboardScreen() {
       bike.default_consumption_l_per_100km,
       bike.baseline_odometer_km
     );
-    const reminderList = computeServiceReminders(rules, services, odometer);
+    const reminderList = computeServiceReminders(rules, services, odometer, t);
     setReminders(reminderList);
     void refreshServiceNotifications(rules, services, odometer);
 
@@ -108,25 +110,25 @@ export default function DashboardScreen() {
       sampleHint:
         fuelStatus.consumption_source === 'measured'
           ? fuelStatus.gps_assisted_sample_count > 0
-            ? `Measured from ${fuelStatus.sample_count} full-tank refuelings (odometer + GPS)`
-            : `Measured from ${fuelStatus.sample_count} full-tank refuelings`
+            ? t('dashboard.measuredGps', { count: fuelStatus.sample_count })
+            : t('dashboard.measured', { count: fuelStatus.sample_count })
           : fuelStatus.consumption_source === 'default'
             ? fuelStatus.sample_count > 0
-              ? `Default consumption until more full-tank data (${fuelStatus.sample_count}/2 samples)`
-              : 'Default consumption — add full-tank refuelings to calibrate'
-            : 'Set average consumption in Settings',
+              ? t('dashboard.defaultPartial', { count: fuelStatus.sample_count })
+              : t('dashboard.defaultCalibrate')
+            : t('dashboard.setInSettings'),
       lastRefuel: lastRefuel
         ? `${formatDate(lastRefuel.date)} · ${formatVolume(lastRefuel.liters, settings.volume_unit)}`
-        : 'No refuelings yet',
+        : t('dashboard.noRefuelings'),
       lastService: lastService
-        ? `${SERVICE_TYPE_LABELS[lastService.type]} · ${formatDate(lastService.date)}`
-        : 'No service records',
+        ? `${t(`serviceTypes.${lastService.type}`)} · ${formatDate(lastService.date)}`
+        : t('dashboard.noService'),
       lowFuel:
         fuelStatus.fuel_remaining_l != null &&
         fuelStatus.fuel_remaining_l <= bike.reserve_threshold_l,
     });
     setLoading(false);
-  }, [refreshKey]);
+  }, [refreshKey, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -143,45 +145,49 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>Biker Log</Text>
-      <Text style={styles.subheading}>{bikeName || 'Your motorcycle'} — fuel, rides, service</Text>
+      <Text style={styles.heading}>{t('dashboard.title')}</Text>
+      <Text style={styles.subheading}>
+        {t('dashboard.subtitle', { bike: bikeName || t('dashboard.yourMotorcycle') })}
+      </Text>
 
       <View style={styles.statsRow}>
-        <StatCard label="Avg. consumption" value={stats.consumption} hint={stats.sampleHint} />
+        <StatCard label={t('dashboard.avgConsumption')} value={stats.consumption} hint={stats.sampleHint} />
         <StatCard
-          label="Fuel in tank"
+          label={t('dashboard.fuelInTank')}
           value={stats.fuelRemaining}
           accent={stats.lowFuel ? 'warning' : 'default'}
         />
       </View>
 
       <View style={styles.statsRow}>
-        <StatCard label="Until empty" value={stats.kmToEmpty} />
-        <StatCard label="Last service" value={stats.lastService} />
+        <StatCard label={t('dashboard.untilEmpty')} value={stats.kmToEmpty} />
+        <StatCard label={t('dashboard.lastService')} value={stats.lastService} />
       </View>
 
       {parkedCoords ? (
         <Pressable style={styles.infoBox} onPress={openParkedLocation}>
-          <Text style={styles.infoLabel}>Find my bike</Text>
-          <Text style={styles.infoValue}>Open last parked location in Maps</Text>
+          <Text style={styles.infoLabel}>{t('dashboard.findMyBike')}</Text>
+          <Text style={styles.infoValue}>{t('dashboard.openParkedMaps')}</Text>
           {parkedAt ? (
-            <Text style={styles.infoHint}>Parked {formatDateTime(parkedAt)}</Text>
+            <Text style={styles.infoHint}>
+              {t('dashboard.parkedAt', { datetime: formatDateTime(parkedAt) })}
+            </Text>
           ) : null}
         </Pressable>
       ) : null}
 
       <View style={styles.infoBox}>
-        <Text style={styles.infoLabel}>Service reminders</Text>
+        <Text style={styles.infoLabel}>{t('dashboard.serviceReminders')}</Text>
         <ReminderList reminders={reminders} />
       </View>
 
       <View style={styles.infoBox}>
-        <Text style={styles.infoLabel}>Tank size</Text>
+        <Text style={styles.infoLabel}>{t('dashboard.tankSize')}</Text>
         <Text style={styles.infoValue}>{stats.tankCapacity}</Text>
       </View>
 
       <View style={styles.infoBox}>
-        <Text style={styles.infoLabel}>Last refueling</Text>
+        <Text style={styles.infoLabel}>{t('dashboard.lastRefueling')}</Text>
         <Text style={styles.infoValue}>{stats.lastRefuel}</Text>
       </View>
 
@@ -189,9 +195,9 @@ export default function DashboardScreen() {
         label={
           activeRide
             ? activeRidePaused
-              ? 'Return to paused ride'
-              : 'Return to active ride'
-            : 'Start ride'
+              ? t('dashboard.returnPaused')
+              : t('dashboard.returnActive')
+            : t('dashboard.startRide')
         }
         onPress={() => router.push('/ride/active')}
         disabled={loading}

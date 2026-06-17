@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { formatCurrency, formatDurationMs } from '@/lib/format';
+import { useI18n } from '@/lib/i18n/context';
 import { formatDistance, formatVolume } from '@/lib/units';
 import type { PeriodStats } from '@/lib/types';
 
@@ -19,18 +20,20 @@ export default function PeriodStatsCard({
   distanceUnit = 'km',
   volumeUnit = 'L',
 }: PeriodStatsCardProps) {
+  const { t } = useI18n();
+
   return (
     <View style={styles.card}>
       <Text style={styles.title}>{stats.label}</Text>
-      <Row label="Rides" value={String(stats.ride_count)} />
+      <Row label={t('stats.rides')} value={String(stats.ride_count)} />
       <Row
-        label="Distance"
+        label={t('stats.distance')}
         value={formatDistance(stats.total_distance_km, distanceUnit)}
       />
-      <Row label="Riding time" value={formatDurationMs(stats.total_moving_time_ms)} />
-      <Row label="Refuelings" value={String(stats.refuel_count)} />
-      <Row label="Fuel used" value={formatVolume(stats.liters_total, volumeUnit)} />
-      <Row label="Fuel spent" value={formatCurrency(stats.fuel_spent, currency)} />
+      <Row label={t('stats.ridingTime')} value={formatDurationMs(stats.total_moving_time_ms)} />
+      <Row label={t('stats.refuelings')} value={String(stats.refuel_count)} />
+      <Row label={t('stats.fuelUsed')} value={formatVolume(stats.liters_total, volumeUnit)} />
+      <Row label={t('stats.fuelSpent')} value={formatCurrency(stats.fuel_spent, currency)} />
     </View>
   );
 }

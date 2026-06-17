@@ -8,15 +8,16 @@ import Colors from '@/constants/Colors';
 import { deleteRefueling, getRefuelings, getSettings } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
 import { formatCurrency, formatDateTime } from '@/lib/format';
+import { useI18n } from '@/lib/i18n/context';
 import { formatDistance, formatVolume } from '@/lib/units';
 import type { Refueling } from '@/lib/types';
 
 export default function FuelScreen() {
   const router = useRouter();
   const { refreshKey, refresh } = useDatabase();
+  const { t } = useI18n();
   const [refuelings, setRefuelings] = useState<Refueling[]>([]);
   const [currency, setCurrency] = useState('USD');
-
   const [distanceUnit, setDistanceUnit] = useState<'km' | 'mi'>('km');
   const [volumeUnit, setVolumeUnit] = useState<'L' | 'gal'>('L');
 
@@ -35,10 +36,10 @@ export default function FuelScreen() {
   );
 
   const handleDelete = (item: Refueling) => {
-    Alert.alert('Delete refueling', 'Are you sure you want to delete this entry?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('fuel.deleteTitle'), t('fuel.deleteMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           await deleteRefueling(item.id);
@@ -51,18 +52,14 @@ export default function FuelScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <PrimaryButton label="Add refueling" onPress={() => router.push('/fuel/add')} />
+        <PrimaryButton label={t('fuel.add')} onPress={() => router.push('/fuel/add')} />
       </View>
 
       <FlatList
         data={refuelings}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          <Text style={styles.empty}>
-            No refuelings yet. Add your first refueling with odometer reading.
-          </Text>
-        }
+        ListEmptyComponent={<Text style={styles.empty}>{t('fuel.empty')}</Text>}
         renderItem={({ item }) => (
           <Pressable
             style={styles.card}
@@ -71,7 +68,7 @@ export default function FuelScreen() {
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>{formatDateTime(item.date)}</Text>
               <Text style={[styles.badge, item.is_full_tank ? styles.badgeFull : styles.badgePartial]}>
-                {item.is_full_tank ? 'Full tank' : 'Partial'}
+                {item.is_full_tank ? t('fuel.fullTank') : t('fuel.partial')}
               </Text>
             </View>
             <Text style={styles.cardMeta}>
@@ -79,7 +76,7 @@ export default function FuelScreen() {
               {formatCurrency(item.price_per_liter, currency)}/{volumeUnit === 'gal' ? 'gal' : 'L'}
             </Text>
             <Text style={styles.cardMeta}>
-              Odometer: {formatDistance(item.odometer_km, distanceUnit, 0)}
+              {t('fuel.odometer', { value: formatDistance(item.odometer_km, distanceUnit, 0) })}
             </Text>
           </Pressable>
         )}

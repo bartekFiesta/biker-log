@@ -4,6 +4,7 @@ import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 import { isNative } from './platform';
 import { autoRideDetector } from './auto-ride-detector';
 import { syncBackgroundRideDetection } from './background-location';
+import { createTranslator } from './i18n';
 import {
   getLatestOdometer,
   getServiceRecords,
@@ -58,8 +59,12 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     })();
 
     const unsubscribe = autoRideDetector.subscribe(() => {
-      Alert.alert('Ride started', 'Auto-detection started recording your ride.');
-      setRefreshKey((k) => k + 1);
+      void (async () => {
+        const settings = await getSettings();
+        const t = createTranslator(settings.app_language ?? 'en');
+        Alert.alert(t('reminders.rideStartedTitle'), t('reminders.rideStartedBody'));
+        setRefreshKey((k) => k + 1);
+      })();
     });
 
     return () => {

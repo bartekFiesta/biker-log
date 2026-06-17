@@ -81,6 +81,7 @@ async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   await migrateServiceReminderRules(db);
   await migrateMultiBike(db);
   await migrateBikeConsumption(db);
+  await migrateAppLanguage(db);
 
   return db;
 }
@@ -89,6 +90,13 @@ async function migrateBikeConsumption(db: SQLite.SQLiteDatabase): Promise<void> 
   const cols = await db.getAllAsync<{ name: string }>('PRAGMA table_info(bikes)');
   if (!cols.some((column) => column.name === 'default_consumption_l_per_100km')) {
     await db.execAsync('ALTER TABLE bikes ADD COLUMN default_consumption_l_per_100km REAL');
+  }
+}
+
+async function migrateAppLanguage(db: SQLite.SQLiteDatabase): Promise<void> {
+  const cols = await db.getAllAsync<{ name: string }>('PRAGMA table_info(settings)');
+  if (!cols.some((column) => column.name === 'app_language')) {
+    await db.execAsync("ALTER TABLE settings ADD COLUMN app_language TEXT NOT NULL DEFAULT 'en'");
   }
 }
 
@@ -275,6 +283,7 @@ function mapSettings(row: Record<string, unknown>): Settings {
     currency: row.currency as string,
     distance_unit: ((row.distance_unit as string) ?? 'km') as Settings['distance_unit'],
     volume_unit: ((row.volume_unit as string) ?? 'L') as Settings['volume_unit'],
+    app_language: ((row.app_language as string) ?? 'en') as Settings['app_language'],
     auto_start_rides: Boolean(row.auto_start_rides ?? 0),
     background_auto_start: Boolean(row.background_auto_start ?? 0),
     notifications_enabled: Boolean(row.notifications_enabled ?? 1),
@@ -362,12 +371,13 @@ export async function updateSettings(partial: Partial<Omit<Settings, 'id'>>): Pr
 
   await db.runAsync(
     `UPDATE settings SET active_bike_id = ?, currency = ?, distance_unit = ?, volume_unit = ?,
-     auto_start_rides = ?, background_auto_start = ?, notifications_enabled = ?, onboarding_complete = ?,
+     app_language = ?, auto_start_rides = ?, background_auto_start = ?, notifications_enabled = ?, onboarding_complete = ?,
      parked_lat = ?, parked_lng = ?, parked_at = ? WHERE id = 1`,
     next.active_bike_id,
     next.currency,
     next.distance_unit,
     next.volume_unit,
+    next.app_language,
     next.auto_start_rides ? 1 : 0,
     next.background_auto_start ? 1 : 0,
     next.notifications_enabled ? 1 : 0,

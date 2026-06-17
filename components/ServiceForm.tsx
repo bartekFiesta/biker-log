@@ -2,7 +2,8 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
-import { SERVICE_TYPE_LABELS, SERVICE_TYPES, type ServiceType } from '@/lib/types';
+import { useI18n } from '@/lib/i18n/context';
+import { SERVICE_TYPES, type ServiceType } from '@/lib/types';
 
 interface ServiceFormProps {
   type: ServiceType;
@@ -21,9 +22,11 @@ export default function ServiceForm({
   onOdometerChange,
   onNotesChange,
 }: ServiceFormProps) {
+  const { t } = useI18n();
+
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Service type</Text>
+      <Text style={styles.sectionTitle}>{t('service.type')}</Text>
       <View style={styles.typeGrid}>
         {SERVICE_TYPES.map((serviceType) => (
           <Pressable
@@ -31,13 +34,13 @@ export default function ServiceForm({
             style={[styles.typeButton, type === serviceType && styles.typeButtonActive]}
             onPress={() => onTypeChange(serviceType)}>
             <Text style={[styles.typeButtonText, type === serviceType && styles.typeButtonTextActive]}>
-              {SERVICE_TYPE_LABELS[serviceType]}
+              {t(`serviceTypes.${serviceType}`)}
             </Text>
           </Pressable>
         ))}
       </View>
 
-      <Text style={styles.fieldLabel}>Odometer (km)</Text>
+      <Text style={styles.fieldLabel}>{t('service.odometer')}</Text>
       <TextInput
         style={styles.input}
         value={odometer}
@@ -47,14 +50,14 @@ export default function ServiceForm({
         placeholder="0"
       />
 
-      <Text style={styles.fieldLabel}>Notes (optional)</Text>
+      <Text style={styles.fieldLabel}>{t('service.notes')}</Text>
       <TextInput
         style={[styles.input, styles.notesInput]}
         value={notes}
         onChangeText={onNotesChange}
         multiline
         placeholderTextColor={Colors.dark.muted}
-        placeholder="e.g. oil brand, remarks..."
+        placeholder={t('service.notesPlaceholder')}
       />
     </View>
   );

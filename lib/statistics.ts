@@ -1,4 +1,5 @@
 import type { PeriodStats, Refueling, Ride, StatsPeriod } from './types';
+import { getStatsPeriodLabel, type AppLanguage } from './i18n';
 
 function periodStart(period: StatsPeriod, reference = new Date()): Date {
   const start = new Date(reference);
@@ -20,10 +21,8 @@ function periodStart(period: StatsPeriod, reference = new Date()): Date {
   return start;
 }
 
-function periodLabel(period: StatsPeriod): string {
-  if (period === 'week') return 'This week';
-  if (period === 'month') return 'This month';
-  return 'This year';
+function periodLabel(period: StatsPeriod, language: AppLanguage): string {
+  return getStatsPeriodLabel(language, period);
 }
 
 function rideMovingMs(ride: Ride): number {
@@ -36,7 +35,8 @@ export function computePeriodStats(
   period: StatsPeriod,
   rides: Ride[],
   refuelings: Refueling[],
-  reference = new Date()
+  reference = new Date(),
+  language: AppLanguage = 'en'
 ): PeriodStats {
   const start = periodStart(period, reference);
   const startMs = start.getTime();
@@ -50,7 +50,7 @@ export function computePeriodStats(
 
   return {
     period,
-    label: periodLabel(period),
+    label: periodLabel(period, language),
     ride_count: periodRides.length,
     total_distance_km: periodRides.reduce((sum, ride) => sum + ride.distance_gps_km, 0),
     total_moving_time_ms: periodRides.reduce((sum, ride) => sum + rideMovingMs(ride), 0),
@@ -63,9 +63,10 @@ export function computePeriodStats(
 export function computeAllPeriodStats(
   rides: Ride[],
   refuelings: Refueling[],
-  reference = new Date()
+  reference = new Date(),
+  language: AppLanguage = 'en'
 ): PeriodStats[] {
   return (['week', 'month', 'year'] as StatsPeriod[]).map((period) =>
-    computePeriodStats(period, rides, refuelings, reference)
+    computePeriodStats(period, rides, refuelings, reference, language)
   );
 }

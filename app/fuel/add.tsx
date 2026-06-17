@@ -9,10 +9,12 @@ import Colors from '@/constants/Colors';
 import { addRefueling, getActiveBike, getLatestOdometer, getSettings } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
 import { resolveFuelTriplet } from '@/lib/fuel-calculations';
+import { useI18n } from '@/lib/i18n/context';
 
 export default function AddFuelScreen() {
   const router = useRouter();
   const { refresh } = useDatabase();
+  const { t } = useI18n();
   const [liters, setLiters] = useState('');
   const [totalPrice, setTotalPrice] = useState('');
   const [pricePerLiter, setPricePerLiter] = useState('');
@@ -38,7 +40,7 @@ export default function AddFuelScreen() {
   const handleSave = async () => {
     const odometerValue = Number(odometer.replace(',', '.'));
     if (!Number.isFinite(odometerValue) || odometerValue <= 0) {
-      Alert.alert('Error', 'Enter a valid odometer reading.');
+      Alert.alert(t('common.error'), t('fuel.odometerInvalid'));
       return;
     }
 
@@ -49,7 +51,7 @@ export default function AddFuelScreen() {
     });
 
     if (!resolved || resolved.liters == null || resolved.total_price == null || resolved.price_per_liter == null) {
-      Alert.alert('Error', 'Enter at least 2 of 3 values: liters, total price, or price per liter.');
+      Alert.alert(t('common.error'), t('fuel.valuesInvalid'));
       return;
     }
 
@@ -69,10 +71,7 @@ export default function AddFuelScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.intro}>
-        Select refueling type: <Text style={styles.introBold}>full tank</Text> (for consumption tracking) or{' '}
-        <Text style={styles.introBold}>partial</Text> (add liters to tank estimate only).
-      </Text>
+      <Text style={styles.intro}>{t('fuel.addIntro')}</Text>
       <FuelForm
         liters={liters}
         totalPrice={totalPrice}
@@ -87,7 +86,11 @@ export default function AddFuelScreen() {
         currency={currency}
         tankCapacityL={tankCapacityL}
       />
-      <PrimaryButton label={saving ? 'Saving...' : 'Save refueling'} onPress={handleSave} disabled={saving} />
+      <PrimaryButton
+        label={saving ? t('common.saving') : t('fuel.save')}
+        onPress={handleSave}
+        disabled={saving}
+      />
     </ScrollView>
   );
 }
@@ -106,9 +109,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.dark.muted,
     lineHeight: 20,
-  },
-  introBold: {
-    color: Colors.dark.text,
-    fontWeight: '600',
   },
 });

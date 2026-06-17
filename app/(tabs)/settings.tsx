@@ -23,10 +23,11 @@ import {
 import { useDatabase } from '@/lib/database-context';
 import { exportAllDataCsv } from '@/lib/export';
 import { importCsvFromPicker } from '@/lib/import-csv';
+import { useI18n } from '@/lib/i18n/context';
+import type { AppLanguage } from '@/lib/i18n';
 import { refreshServiceNotifications } from '@/lib/notifications';
 import {
   REMINDER_SERVICE_TYPES,
-  SERVICE_TYPE_LABELS,
   type DistanceUnit,
   type ReminderServiceType,
   type ServiceReminderRule,
@@ -36,6 +37,7 @@ import {
 export default function SettingsScreen() {
   const router = useRouter();
   const { refreshKey, refresh } = useDatabase();
+  const { t, language, setLanguage } = useI18n();
   const [bikeName, setBikeName] = useState('');
   const [tankCapacity, setTankCapacity] = useState('17');
   const [defaultConsumption, setDefaultConsumption] = useState('');
@@ -89,11 +91,11 @@ export default function SettingsScreen() {
     const reserve = Number(reserveThreshold.replace(',', '.'));
 
     if (!Number.isFinite(tank) || tank <= 0) {
-      Alert.alert('Error', 'Enter a valid tank capacity.');
+      Alert.alert(t('common.error'), t('settings.tankInvalid'));
       return;
     }
     if (!Number.isFinite(reserve) || reserve < 0) {
-      Alert.alert('Error', 'Enter a valid reserve threshold.');
+      Alert.alert(t('common.error'), t('settings.reserveInvalid'));
       return;
     }
     const consumptionValue = defaultConsumption.trim()
@@ -103,11 +105,11 @@ export default function SettingsScreen() {
       defaultConsumption.trim() &&
       (!Number.isFinite(consumptionValue) || consumptionValue! <= 0)
     ) {
-      Alert.alert('Error', 'Enter a valid average consumption (L/100 km).');
+      Alert.alert(t('common.error'), t('settings.consumptionInvalid'));
       return;
     }
     if (!currency.trim() || normalizeCurrency(currency).length < 3) {
-      Alert.alert('Error', 'Choose a currency (e.g. USD).');
+      Alert.alert(t('common.error'), t('settings.currencyInvalid'));
       return;
     }
 
@@ -126,6 +128,7 @@ export default function SettingsScreen() {
       auto_start_rides: autoStartRides,
       background_auto_start: backgroundAutoStart,
       notifications_enabled: notificationsEnabled,
+      app_language: language,
     });
     for (const rule of reminderRules) {
       await updateServiceReminderRule({
@@ -144,7 +147,7 @@ export default function SettingsScreen() {
     await refreshServiceNotifications(rules, records, odometer);
     setSaving(false);
     refresh();
-    Alert.alert('Saved', 'Settings updated.');
+    Alert.alert(t('settings.saved'));
   };
 
   const handleExport = async () => {
@@ -152,7 +155,10 @@ export default function SettingsScreen() {
     try {
       await exportAllDataCsv();
     } catch (error) {
-      Alert.alert('Export failed', error instanceof Error ? error.message : 'Could not export data.');
+      Alert.alert(
+        t('common.error'),
+        error instanceof Error ? error.message : t('settings.exportFailed')
+      );
     } finally {
       setExporting(false);
     }
@@ -164,98 +170,138 @@ export default function SettingsScreen() {
       const result = await importCsvFromPicker();
       if (result.fuel === 0 && result.service === 0) return;
       refresh();
-      Alert.alert('Import complete', `Imported ${result.fuel} refuelings and ${result.service} service records.`);
+      Alert.alert(
+        t('settings.importComplete', { fuel: result.fuel, service: result.service })
+      );
     } catch (error) {
-      Alert.alert('Import failed', error instanceof Error ? error.message : 'Could not import data.');
+      Alert.alert(
+        t('common.error'),
+        error instanceof Error ? error.message : t('settings.importFailed')
+      );
     } finally {
       setImporting(false);
     }
   };
 
+  const handleLanguageChange = (next: AppLanguage) => {
+    void setLanguage(next);
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.sectionTitle}>Motorcycle</Text>
+      <Text style={styles.sectionTitle}>{t('settings.motorcycle')}</Text>
       <PrimaryButton
-        label="Manage motorcycles"
+        label={t('settings.manageBikes')}
         onPress={() => router.push('/bikes')}
         variant="secondary"
       />
-      <Field label="Active motorcycle name" value={bikeName} onChangeText={setBikeName} placeholder="My motorcycle" />
       <Field
-        label="Tank size (liters)"
+        label={t('settings.bikeName')}
+        value={bikeName}
+        onChangeText={setBikeName}
+        placeholder={t('onboarding.placeholderName')}
+      />
+      <Field
+        label={t('settings.tankSize')}
         value={tankCapacity}
         onChangeText={setTankCapacity}
         keyboardType="decimal-pad"
-        placeholder="e.g. 17"
+        placeholder={t('onboarding.placeholderTank')}
       />
       <Field
-        label="Average consumption (L/100 km)"
+        label={t('settings.avgConsumption')}
         value={defaultConsumption}
         onChangeText={setDefaultConsumption}
         keyboardType="decimal-pad"
-        placeholder="e.g. 5.5"
-        hint="Used for fuel level estimates until two full-tank refuelings are logged."
+        placeholder={t('onboarding.placeholderConsumption')}
+        hint={t('settings.consumptionHint')}
       />
+
+      <View style={styles.languageRow}>
+        <Text style={styles.fieldLabel}>{t('settings.language')}</Text>
+        <View style={styles.unitButtons}>
+          <Pressable
+            style={[styles.unitButton, language === 'en' && styles.unitButtonActive]}
+            onPress={() => handleLanguageChange('en')}>
+            <Text style={[styles.unitButtonText, language === 'en' && styles.unitButtonTextActive]}>
+              {t('settings.languageEn')}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.unitButton, language === 'es' && styles.unitButtonActive]}
+            onPress={() => handleLanguageChange('es')}>
+            <Text style={[styles.unitButtonText, language === 'es' && styles.unitButtonTextActive]}>
+              {t('settings.languageEs')}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+
       <Field
-        label="Reserve threshold (liters)"
+        label={t('settings.reserve')}
         value={reserveThreshold}
         onChangeText={setReserveThreshold}
-        hint="Dashboard shows a low-fuel warning below this level."
+        hint={t('settings.reserveHint')}
         keyboardType="decimal-pad"
       />
 
-      <Text style={styles.sectionTitle}>Units & currency</Text>
-      <UnitPicker label="Distance" value={distanceUnit} options={['km', 'mi']} onChange={setDistanceUnit} />
-      <UnitPicker label="Volume" value={volumeUnit} options={['L', 'gal']} onChange={setVolumeUnit} />
+      <Text style={styles.sectionTitle}>{t('settings.unitsCurrency')}</Text>
+      <UnitPicker label={t('settings.distance')} value={distanceUnit} options={['km', 'mi']} onChange={setDistanceUnit} />
+      <UnitPicker label={t('settings.volume')} value={volumeUnit} options={['L', 'gal']} onChange={setVolumeUnit} />
       <CurrencyPicker value={currency} onChange={setCurrency} />
 
-      <Text style={styles.sectionTitle}>Ride detection</Text>
+      <Text style={styles.sectionTitle}>{t('settings.rideDetection')}</Text>
       <ToggleRow
-        label="Auto-start rides (foreground)"
-        hint="Starts recording when speed stays above 25 km/h for 20 seconds while the app is open."
+        label={t('settings.autoStartFg')}
+        hint={t('settings.autoStartFgHint')}
         value={autoStartRides}
         onChange={setAutoStartRides}
       />
       <ToggleRow
-        label="Auto-start rides (background)"
-        hint="Same detection while the app is in the background. Requires location permission."
+        label={t('settings.autoStartBg')}
+        hint={t('settings.autoStartBgHint')}
         value={backgroundAutoStart}
         onChange={setBackgroundAutoStart}
       />
 
-      <Text style={styles.sectionTitle}>Notifications</Text>
+      <Text style={styles.sectionTitle}>{t('settings.notifications')}</Text>
       <ToggleRow
-        label="Service reminders"
-        hint="Local notifications when service is due soon or overdue."
+        label={t('settings.serviceReminders')}
+        hint={t('settings.notificationsHint')}
         value={notificationsEnabled}
         onChange={setNotificationsEnabled}
       />
 
-      <Text style={styles.sectionTitle}>Service reminders</Text>
+      <Text style={styles.sectionTitle}>{t('settings.serviceReminders')}</Text>
       {REMINDER_SERVICE_TYPES.map((type) => {
         const rule = reminderRules.find((item) => item.type === type);
         if (!rule) return null;
         return (
           <ReminderRuleEditor
             key={type}
-            label={SERVICE_TYPE_LABELS[type]}
+            label={t(`serviceTypes.${type}`)}
             rule={rule}
             onChange={(patch) => updateRule(type, patch)}
+            t={t}
           />
         );
       })}
 
-      <PrimaryButton label={saving ? 'Saving...' : 'Save settings'} onPress={handleSave} disabled={saving} />
-
-      <Text style={styles.sectionTitle}>Data</Text>
       <PrimaryButton
-        label={exporting ? 'Exporting...' : 'Export CSV'}
+        label={saving ? t('common.saving') : t('settings.saveSettings')}
+        onPress={handleSave}
+        disabled={saving}
+      />
+
+      <Text style={styles.sectionTitle}>{t('settings.data')}</Text>
+      <PrimaryButton
+        label={exporting ? t('settings.exporting') : t('settings.exportCsv')}
         onPress={handleExport}
         variant="secondary"
         disabled={exporting}
       />
       <PrimaryButton
-        label={importing ? 'Importing...' : 'Import CSV'}
+        label={importing ? t('settings.importing') : t('settings.importCsv')}
         onPress={handleImport}
         variant="secondary"
         disabled={importing}
@@ -298,10 +344,12 @@ function ReminderRuleEditor({
   label,
   rule,
   onChange,
+  t,
 }: {
   label: string;
   rule: ServiceReminderRule;
   onChange: (patch: Partial<ServiceReminderRule>) => void;
+  t: (key: string) => string;
 }) {
   return (
     <View style={styles.ruleBox}>
@@ -309,19 +357,19 @@ function ReminderRuleEditor({
         <Text style={styles.ruleTitle}>{label}</Text>
         <Pressable onPress={() => onChange({ enabled: !rule.enabled })}>
           <Text style={[styles.ruleToggle, rule.enabled && styles.ruleToggleOn]}>
-            {rule.enabled ? 'On' : 'Off'}
+            {rule.enabled ? t('common.on') : t('common.off')}
           </Text>
         </Pressable>
       </View>
       <Field
-        label="Every (km)"
+        label={t('settings.everyKm')}
         value={rule.interval_km != null ? String(rule.interval_km) : ''}
         onChangeText={(value) => onChange({ interval_km: value.trim() ? Number(value.replace(',', '.')) : null })}
         keyboardType="decimal-pad"
         placeholder="e.g. 5000"
       />
       <Field
-        label="Every (days)"
+        label={t('settings.everyDays')}
         value={rule.interval_days != null ? String(rule.interval_days) : ''}
         onChangeText={(value) => onChange({ interval_days: value.trim() ? Number(value) : null })}
         keyboardType="number-pad"
@@ -387,6 +435,7 @@ const styles = StyleSheet.create({
     color: Colors.dark.text,
     fontSize: 16,
   },
+  languageRow: { gap: 8 },
   unitRow: { gap: 8 },
   unitButtons: { flexDirection: 'row', gap: 8 },
   unitButton: {

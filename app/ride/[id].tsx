@@ -8,6 +8,7 @@ import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { getRide, getSettings } from '@/lib/db';
 import { formatCurrency, formatDateTime, formatDuration, formatDurationMs } from '@/lib/format';
+import { useI18n } from '@/lib/i18n/context';
 import { computeRideSpeedStats } from '@/lib/ride-speed';
 import { formatDistance } from '@/lib/units';
 import type { Ride } from '@/lib/types';
@@ -15,6 +16,7 @@ import type { Ride } from '@/lib/types';
 export default function RideDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useI18n();
   const [ride, setRide] = useState<Ride | null>(null);
   const [currency, setCurrency] = useState('USD');
   const [distanceUnit, setDistanceUnit] = useState<'km' | 'mi'>('km');
@@ -33,7 +35,7 @@ export default function RideDetailScreen() {
   if (!ride) {
     return (
       <View style={styles.container}>
-        <Text style={styles.empty}>Loading...</Text>
+        <Text style={styles.empty}>{t('rideDetails.loading')}</Text>
       </View>
     );
   }
@@ -45,32 +47,54 @@ export default function RideDetailScreen() {
       <MapRoute points={ride.route_points} height={280} />
 
       <View style={styles.stats}>
-        {ride.label ? <Stat label="Label" value={ride.label} /> : null}
-        <Stat label="Start" value={formatDateTime(ride.started_at)} />
-        <Stat label="Duration" value={formatDuration(ride.started_at, ride.ended_at)} />
-        <Stat label="GPS distance" value={formatDistance(ride.distance_gps_km, distanceUnit, 2)} />
+        {ride.label ? <Stat label={t('rideDetails.label')} value={ride.label} /> : null}
+        <Stat label={t('rideDetails.start')} value={formatDateTime(ride.started_at)} />
+        <Stat label={t('rideDetails.duration')} value={formatDuration(ride.started_at, ride.ended_at)} />
+        <Stat
+          label={t('rideDetails.gpsDistance')}
+          value={formatDistance(ride.distance_gps_km, distanceUnit, 2)}
+        />
         {speedStats ? (
           <>
-            <Stat label="Avg. speed" value={`${Math.round(speedStats.avg_kmh)} km/h`} />
-            <Stat label="Max speed" value={`${Math.round(speedStats.max_kmh)} km/h`} />
+            <Stat
+              label={t('rideDetails.avgSpeed')}
+              value={t('rideDetails.speedKmh', { value: Math.round(speedStats.avg_kmh) })}
+            />
+            <Stat
+              label={t('rideDetails.maxSpeed')}
+              value={t('rideDetails.speedKmh', { value: Math.round(speedStats.max_kmh) })}
+            />
           </>
         ) : null}
         {ride.odometer_start != null ? (
-          <Stat label="Odometer start" value={formatDistance(ride.odometer_start, distanceUnit, 0)} />
+          <Stat
+            label={t('rideDetails.odometerStart')}
+            value={formatDistance(ride.odometer_start, distanceUnit, 0)}
+          />
         ) : null}
         {ride.odometer_end != null ? (
-          <Stat label="Odometer end" value={formatDistance(ride.odometer_end, distanceUnit, 0)} />
+          <Stat
+            label={t('rideDetails.odometerEnd')}
+            value={formatDistance(ride.odometer_end, distanceUnit, 0)}
+          />
         ) : null}
         {ride.tolls_cost != null ? (
-          <Stat label="Tolls" value={formatCurrency(ride.tolls_cost, currency)} />
+          <Stat label={t('rideDetails.tolls')} value={formatCurrency(ride.tolls_cost, currency)} />
         ) : null}
         {ride.paused_duration_ms > 0 ? (
-          <Stat label="Paused time" value={formatDurationMs(ride.paused_duration_ms)} />
+          <Stat
+            label={t('rideDetails.pausedTime')}
+            value={formatDurationMs(ride.paused_duration_ms)}
+          />
         ) : null}
-        <Stat label="GPS points" value={String(ride.route_points.length)} />
+        <Stat label={t('rideDetails.gpsPoints')} value={String(ride.route_points.length)} />
       </View>
 
-      <PrimaryButton label="Edit ride" onPress={() => router.push(`/ride/edit/${ride.id}`)} variant="secondary" />
+      <PrimaryButton
+        label={t('rideDetails.edit')}
+        onPress={() => router.push(`/ride/edit/${ride.id}`)}
+        variant="secondary"
+      />
     </ScrollView>
   );
 }

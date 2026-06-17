@@ -7,11 +7,13 @@ import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { getRide, getSettings, updateRideDetails } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
+import { useI18n } from '@/lib/i18n/context';
 
 export default function EditRideScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { refresh } = useDatabase();
+  const { t } = useI18n();
   const [label, setLabel] = useState('');
   const [tolls, setTolls] = useState('');
   const [odometerStart, setOdometerStart] = useState('');
@@ -25,7 +27,7 @@ export default function EditRideScreen() {
       if (!Number.isFinite(rideId)) return;
       const [ride, settings] = await Promise.all([getRide(rideId), getSettings()]);
       if (!ride) {
-        Alert.alert('Not found', 'Ride not found.');
+        Alert.alert(t('common.notFound'), t('rideEdit.notFound'));
         router.back();
         return;
       }
@@ -35,7 +37,7 @@ export default function EditRideScreen() {
       setOdometerStart(ride.odometer_start != null ? String(Math.round(ride.odometer_start)) : '');
       setOdometerEnd(ride.odometer_end != null ? String(Math.round(ride.odometer_end)) : '');
     })();
-  }, [id, router]);
+  }, [id, router, t]);
 
   const handleSave = async () => {
     const rideId = Number(id);
@@ -44,15 +46,15 @@ export default function EditRideScreen() {
     const tollsValue = tolls.trim() ? Number(tolls.replace(',', '.')) : null;
 
     if (odometerStart.trim() && !Number.isFinite(startValue)) {
-      Alert.alert('Error', 'Enter a valid starting odometer.');
+      Alert.alert(t('common.error'), t('rideEdit.odometerStartInvalid'));
       return;
     }
     if (odometerEnd.trim() && !Number.isFinite(endValue)) {
-      Alert.alert('Error', 'Enter a valid ending odometer.');
+      Alert.alert(t('common.error'), t('rideEdit.odometerEndInvalid'));
       return;
     }
     if (tolls.trim() && !Number.isFinite(tollsValue)) {
-      Alert.alert('Error', 'Enter a valid tolls amount.');
+      Alert.alert(t('common.error'), t('rideEdit.tollsInvalid'));
       return;
     }
 
@@ -70,27 +72,36 @@ export default function EditRideScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Field label="Trip label (optional)" value={label} onChangeText={setLabel} placeholder="e.g. Weekend trip" />
       <Field
-        label={`Tolls cost (${currency}, optional)`}
+        label={t('rideEdit.label')}
+        value={label}
+        onChangeText={setLabel}
+        placeholder={t('rideEdit.placeholderLabel')}
+      />
+      <Field
+        label={t('rideEdit.tolls', { currency })}
         value={tolls}
         onChangeText={setTolls}
         keyboardType="decimal-pad"
         placeholder="0"
       />
       <Field
-        label="Odometer start (km)"
+        label={t('rideEdit.odometerStart')}
         value={odometerStart}
         onChangeText={setOdometerStart}
         keyboardType="decimal-pad"
       />
       <Field
-        label="Odometer end (km)"
+        label={t('rideEdit.odometerEnd')}
         value={odometerEnd}
         onChangeText={setOdometerEnd}
         keyboardType="decimal-pad"
       />
-      <PrimaryButton label={saving ? 'Saving...' : 'Save changes'} onPress={handleSave} disabled={saving} />
+      <PrimaryButton
+        label={saving ? t('common.saving') : t('rideEdit.save')}
+        onPress={handleSave}
+        disabled={saving}
+      />
     </ScrollView>
   );
 }

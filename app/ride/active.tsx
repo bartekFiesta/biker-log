@@ -9,19 +9,15 @@ import Colors from '@/constants/Colors';
 import { getLatestOdometer, getSettings } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
 import { formatDurationMs } from '@/lib/format';
+import { useI18n } from '@/lib/i18n/context';
 import { formatDistance } from '@/lib/units';
 import { rideTracker, type RideTrackerSnapshot } from '@/lib/ride-tracker';
 import type { RideRecordingState, RoutePoint } from '@/lib/types';
 
-const STATE_LABELS: Record<RideRecordingState, string> = {
-  idle: 'Ready to start',
-  recording: 'Recording route',
-  paused: 'Paused — not counting distance',
-};
-
 export default function ActiveRideScreen() {
   const router = useRouter();
   const { refresh } = useDatabase();
+  const { t } = useI18n();
   const [state, setState] = useState<RideRecordingState>('idle');
   const [points, setPoints] = useState<RoutePoint[]>([]);
   const [distanceKm, setDistanceKm] = useState(0);
@@ -33,6 +29,13 @@ export default function ActiveRideScreen() {
   const [tolls, setTolls] = useState('');
   const [distanceUnit, setDistanceUnit] = useState<'km' | 'mi'>('km');
   const [loading, setLoading] = useState(false);
+
+  const stateLabel =
+    state === 'recording'
+      ? t('rideActive.recording')
+      : state === 'paused'
+        ? t('rideActive.paused')
+        : t('rideActive.ready');
 
   useEffect(() => {
     void (async () => {
@@ -71,12 +74,15 @@ export default function ActiveRideScreen() {
         ? Number(odometerStart.replace(',', '.'))
         : null;
       if (odometerStart.trim() && !Number.isFinite(startValue)) {
-        Alert.alert('Error', 'Enter a valid starting odometer reading.');
+        Alert.alert(t('common.error'), t('rideActive.odometerStartInvalid'));
         return;
       }
       await rideTracker.start(startValue);
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Could not start ride.');
+      Alert.alert(
+        t('common.error'),
+        error instanceof Error ? error.message : t('rideActive.startFailed')
+      );
     } finally {
       setLoading(false);
     }
@@ -87,7 +93,10 @@ export default function ActiveRideScreen() {
     try {
       await rideTracker.pause();
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Could not pause ride.');
+      Alert.alert(
+        t('common.error'),
+        error instanceof Error ? error.message : t('rideActive.pauseFailed')
+      );
     } finally {
       setLoading(false);
     }
@@ -98,7 +107,10 @@ export default function ActiveRideScreen() {
     try {
       await rideTracker.resume();
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Could not resume ride.');
+      Alert.alert(
+        t('common.error'),
+        error instanceof Error ? error.message : t('rideActive.resumeFailed')
+      );
     } finally {
       setLoading(false);
     }
@@ -109,7 +121,7 @@ export default function ActiveRideScreen() {
     try {
       const endValue = odometerEnd.trim() ? Number(odometerEnd.replace(',', '.')) : null;
       if (odometerEnd.trim() && !Number.isFinite(endValue)) {
-        Alert.alert('Error', 'Enter a valid ending odometer reading.');
+        Alert.alert(t('common.error'), t('rideActive.odometerEndInvalid'));
         return;
       }
       await rideTracker.stop(
@@ -120,7 +132,10 @@ export default function ActiveRideScreen() {
       refresh();
       router.back();
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Could not stop ride.');
+      Alert.alert(
+        t('common.error'),
+        error instanceof Error ? error.message : t('rideActive.stopFailed')
+      );
     } finally {
       setLoading(false);
     }
@@ -133,12 +148,14 @@ export default function ActiveRideScreen() {
       <View style={styles.statsBox}>
         <Text style={styles.distance}>{formatDistance(distanceKm, distanceUnit, 2)}</Text>
         <View style={[styles.statusBadge, state === 'recording' && styles.statusRecording, state === 'paused' && styles.statusPaused]}>
-          <Text style={styles.statusText}>{STATE_LABELS[state]}</Text>
+          <Text style={styles.statusText}>{stateLabel}</Text>
         </View>
         {isActive ? (
           <Text style={styles.timing}>
-            Riding: {formatDurationMs(movingDurationMs)}
-            {pausedDurationMs > 0 ? ` · Paused: ${formatDurationMs(pausedDurationMs)}` : ''}
+            {t('rideActive.riding', { duration: formatDurationMs(movingDurationMs) })}
+            {pausedDurationMs > 0
+              ? ` · ${t('rideActive.pausedTime', { duration: formatDurationMs(pausedDurationMs) })}`
+              : ''}
           </Text>
         ) : null}
       </View>
@@ -147,46 +164,48 @@ export default function ActiveRideScreen() {
 
       {!isActive ? (
         <View style={styles.form}>
-          <Text style={styles.label}>Starting odometer (optional)</Text>
+          <Text style={styles.label}>{t('rideActive.odometerStart')}</Text>
           <TextInput
             style={styles.input}
             value={odometerStart}
             onChangeText={setOdometerStart}
             keyboardType="decimal-pad"
             placeholderTextColor={Colors.dark.muted}
-            placeholder="km"
+            placeholder={t('common.km')}
           />
-          <Text style={styles.hint}>
-            Pause when you stop (rest area, traffic). Distance is only recorded while riding.
-          </Text>
-          <PrimaryButton label={loading ? 'Starting...' : 'Start ride'} onPress={handleStart} disabled={loading} />
+          <Text style={styles.hint}>{t('rideActive.pauseHint')}</Text>
+          <PrimaryButton
+            label={loading ? t('rideActive.starting') : t('rideActive.start')}
+            onPress={handleStart}
+            disabled={loading}
+          />
         </View>
       ) : (
         <View style={styles.form}>
           {state === 'recording' ? (
             <PrimaryButton
-              label={loading ? 'Pausing...' : 'Pause'}
+              label={loading ? t('rideActive.pausing') : t('rideActive.pause')}
               onPress={handlePause}
               variant="secondary"
               disabled={loading}
             />
           ) : (
             <PrimaryButton
-              label={loading ? 'Resuming...' : 'Resume riding'}
+              label={loading ? t('rideActive.resuming') : t('rideActive.resume')}
               onPress={handleResume}
               disabled={loading}
             />
           )}
 
-          <Text style={styles.label}>Trip label (optional)</Text>
+          <Text style={styles.label}>{t('rideActive.tripLabel')}</Text>
           <TextInput
             style={styles.input}
             value={label}
             onChangeText={setLabel}
-            placeholder="e.g. Commute"
+            placeholder={t('rideActive.placeholderLabel')}
             placeholderTextColor={Colors.dark.muted}
           />
-          <Text style={styles.label}>Tolls cost (optional)</Text>
+          <Text style={styles.label}>{t('rideActive.tolls')}</Text>
           <TextInput
             style={styles.input}
             value={tolls}
@@ -195,17 +214,17 @@ export default function ActiveRideScreen() {
             placeholderTextColor={Colors.dark.muted}
             placeholder="0"
           />
-          <Text style={styles.label}>Ending odometer (optional)</Text>
+          <Text style={styles.label}>{t('rideActive.odometerEnd')}</Text>
           <TextInput
             style={styles.input}
             value={odometerEnd}
             onChangeText={setOdometerEnd}
             keyboardType="decimal-pad"
             placeholderTextColor={Colors.dark.muted}
-            placeholder="km"
+            placeholder={t('common.km')}
           />
           <PrimaryButton
-            label={loading ? 'Stopping...' : 'Stop ride'}
+            label={loading ? t('rideActive.stopping') : t('rideActive.stop')}
             onPress={handleStop}
             variant="danger"
             disabled={loading}

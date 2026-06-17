@@ -19,12 +19,15 @@ export interface Bike {
   default_consumption_l_per_100km: number | null;
 }
 
+export type AppLanguage = 'en' | 'es';
+
 export interface Settings {
   id: number;
   active_bike_id: number;
   currency: string;
   distance_unit: DistanceUnit;
   volume_unit: VolumeUnit;
+  app_language: AppLanguage;
   auto_start_rides: boolean;
   background_auto_start: boolean;
   notifications_enabled: boolean;

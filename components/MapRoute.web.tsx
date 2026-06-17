@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Text as ThemedText } from '@/components/Themed';
 import Colors from '@/constants/Colors';
+import { useI18n } from '@/lib/i18n/context';
 import type { RoutePoint } from '@/lib/types';
 
 interface MapRouteProps {
@@ -11,6 +12,7 @@ interface MapRouteProps {
 }
 
 export default function MapRoute({ points, height = 260 }: MapRouteProps) {
+  const { t } = useI18n();
   const distanceKm = useMemo(() => {
     if (points.length < 2) return 0;
     let total = 0;
@@ -35,11 +37,11 @@ export default function MapRoute({ points, height = 260 }: MapRouteProps) {
 
   return (
     <View style={[styles.webFallback, { height }]}>
-      <ThemedText style={styles.webTitle}>Route preview</ThemedText>
+      <ThemedText style={styles.webTitle}>{t('map.routePreview')}</ThemedText>
       <Text style={styles.webMeta}>
-        {points.length} GPS points · ~{distanceKm.toFixed(1)} km
+        {t('map.gpsPoints', { count: points.length })} · {t('map.approxKm', { km: distanceKm.toFixed(1) })}
       </Text>
-      <Text style={styles.webHint}>Full map view is in the native iOS build.</Text>
+      <Text style={styles.webHint}>{t('map.webFallback')}</Text>
     </View>
   );
 }

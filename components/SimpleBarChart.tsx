@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
+import { useI18n } from '@/lib/i18n/context';
 
 interface SimpleBarChartProps {
   title: string;
@@ -16,11 +17,13 @@ export default function SimpleBarChart({
   unit = '',
   formatValue,
 }: SimpleBarChartProps) {
+  const { t } = useI18n();
+
   if (data.length === 0) {
     return (
       <View style={styles.card}>
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.empty}>Not enough data yet</Text>
+        <Text style={styles.empty}>{t('stats.notEnoughData')}</Text>
       </View>
     );
   }

@@ -15,16 +15,17 @@ import {
 } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
 import { formatDate } from '@/lib/format';
+import { useI18n } from '@/lib/i18n/context';
 import { formatDistance } from '@/lib/units';
 import { computeServiceReminders } from '@/lib/service-reminders';
-import { SERVICE_TYPE_LABELS, type ServiceRecord, type ServiceReminderStatus } from '@/lib/types';
+import type { ServiceRecord, ServiceReminderStatus } from '@/lib/types';
 
 export default function ServiceScreen() {
   const router = useRouter();
   const { refreshKey, refresh } = useDatabase();
+  const { t } = useI18n();
   const [records, setRecords] = useState<ServiceRecord[]>([]);
   const [reminders, setReminders] = useState<ServiceReminderStatus[]>([]);
-
   const [distanceUnit, setDistanceUnit] = useState<'km' | 'mi'>('km');
 
   const load = useCallback(async () => {
@@ -35,9 +36,9 @@ export default function ServiceScreen() {
       getSettings(),
     ]);
     setRecords(data);
-    setReminders(computeServiceReminders(rules, data, odometer));
+    setReminders(computeServiceReminders(rules, data, odometer, t));
     setDistanceUnit(settings.distance_unit);
-  }, [refreshKey]);
+  }, [refreshKey, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -46,10 +47,10 @@ export default function ServiceScreen() {
   );
 
   const handleDelete = (item: ServiceRecord) => {
-    Alert.alert('Delete service record', 'Are you sure you want to delete this entry?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('service.deleteTitle'), t('service.deleteMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           await deleteServiceRecord(item.id);
@@ -62,7 +63,7 @@ export default function ServiceScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <PrimaryButton label="Add service" onPress={() => router.push('/service/add')} />
+        <PrimaryButton label={t('service.add')} onPress={() => router.push('/service/add')} />
       </View>
 
       <FlatList
@@ -71,21 +72,17 @@ export default function ServiceScreen() {
         contentContainerStyle={styles.list}
         ListHeaderComponent={
           <View style={styles.reminderSection}>
-            <Text style={styles.reminderTitle}>Reminder status</Text>
+            <Text style={styles.reminderTitle}>{t('service.reminderStatus')}</Text>
             <ReminderList reminders={reminders} />
           </View>
         }
-        ListEmptyComponent={
-          <Text style={styles.empty}>
-            No service records yet. Add an oil change, brake pads, or other service.
-          </Text>
-        }
+        ListEmptyComponent={<Text style={styles.empty}>{t('service.empty')}</Text>}
         renderItem={({ item }) => (
           <Pressable
             style={styles.card}
             onPress={() => router.push(`/service/${item.id}`)}
             onLongPress={() => handleDelete(item)}>
-            <Text style={styles.cardTitle}>{SERVICE_TYPE_LABELS[item.type]}</Text>
+            <Text style={styles.cardTitle}>{t(`serviceTypes.${item.type}`)}</Text>
             <Text style={styles.cardMeta}>
               {formatDate(item.date)} · {formatDistance(item.odometer_km, distanceUnit, 0)}
             </Text>

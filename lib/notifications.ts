@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 
 import { getSettings } from './db';
+import { createTranslator } from './i18n';
 import { isWeb } from './platform';
 import { computeServiceReminders } from './service-reminders';
 import type { ServiceReminderStatus } from './types';
@@ -27,7 +28,8 @@ export async function requestNotificationPermissions(): Promise<boolean> {
 }
 
 export async function syncServiceNotifications(
-  reminders: ServiceReminderStatus[]
+  reminders: ServiceReminderStatus[],
+  language: Awaited<ReturnType<typeof getSettings>>['app_language']
 ): Promise<void> {
   if (isWeb) return;
 
@@ -40,6 +42,8 @@ export async function syncServiceNotifications(
   const granted = await requestNotificationPermissions();
   if (!granted) return;
 
+  const t = createTranslator(language);
+
   await Notifications.cancelAllScheduledNotificationsAsync();
 
   for (const reminder of reminders) {
@@ -47,7 +51,8 @@ export async function syncServiceNotifications(
 
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: reminder.level === 'overdue' ? 'Service overdue' : 'Service due soon',
+        title:
+          reminder.level === 'overdue' ? t('reminders.overdueTitle') : t('reminders.dueSoonTitle'),
         body: `${reminder.label}: ${reminder.message}`,
         sound: true,
       },
@@ -65,6 +70,8 @@ export async function refreshServiceNotifications(
   records: Awaited<ReturnType<typeof import('./db').getServiceRecords>>,
   odometer: number | null
 ): Promise<void> {
-  const reminders = computeServiceReminders(rules, records, odometer);
-  await syncServiceNotifications(reminders);
+  const settings = await getSettings();
+  const t = createTranslator(settings.app_language);
+  const reminders = computeServiceReminders(rules, records, odometer, t);
+  await syncServiceNotifications(reminders, settings.app_language);
 }

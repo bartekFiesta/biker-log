@@ -4,7 +4,7 @@ import type {
   ServiceReminderRule,
   ServiceReminderStatus,
 } from './types';
-import { SERVICE_TYPE_LABELS } from './types';
+import type { TranslateFn } from './i18n';
 
 const DUE_SOON_KM = 500;
 const DUE_SOON_DAYS = 14;
@@ -17,14 +17,15 @@ function daysBetween(fromIso: string, toDate: Date): number {
 export function computeServiceReminders(
   rules: ServiceReminderRule[],
   records: ServiceRecord[],
-  currentOdometer: number | null
+  currentOdometer: number | null,
+  t: TranslateFn
 ): ServiceReminderStatus[] {
   const now = new Date();
 
   return rules
     .filter((rule) => rule.enabled)
     .map((rule) => {
-      const label = SERVICE_TYPE_LABELS[rule.type];
+      const label = t(`serviceTypes.${rule.type}`);
       const last = records
         .filter((record) => record.type === rule.type)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
@@ -34,7 +35,7 @@ export function computeServiceReminders(
           type: rule.type,
           label,
           level: 'unknown' as const,
-          message: 'No service recorded yet — set a baseline in Service tab',
+          message: t('reminders.noServiceYet'),
           km_remaining: null,
           days_remaining: null,
         };
@@ -51,7 +52,7 @@ export function computeServiceReminders(
       }
 
       let level: ServiceReminderStatus['level'] = 'ok';
-      let message = 'Up to date';
+      let message = t('reminders.upToDate');
 
       const kmOverdue = kmRemaining != null && kmRemaining < 0;
       const daysOverdue = daysRemaining != null && daysRemaining < 0;
@@ -62,19 +63,19 @@ export function computeServiceReminders(
       if (kmOverdue || daysOverdue) {
         level = 'overdue';
         const parts: string[] = [];
-        if (kmOverdue) parts.push(`${Math.abs(Math.round(kmRemaining!))} km overdue`);
-        if (daysOverdue) parts.push(`${Math.abs(daysRemaining!)} days overdue`);
+        if (kmOverdue) parts.push(t('reminders.kmOverdue', { count: Math.abs(Math.round(kmRemaining!)) }));
+        if (daysOverdue) parts.push(t('reminders.daysOverdue', { count: Math.abs(daysRemaining!) }));
         message = parts.join(' · ');
       } else if (kmDueSoon || daysDueSoon) {
         level = 'due_soon';
         const parts: string[] = [];
-        if (kmRemaining != null) parts.push(`${Math.round(kmRemaining)} km left`);
-        if (daysRemaining != null) parts.push(`${daysRemaining} days left`);
+        if (kmRemaining != null) parts.push(t('reminders.kmLeft', { count: Math.round(kmRemaining) }));
+        if (daysRemaining != null) parts.push(t('reminders.daysLeft', { count: daysRemaining }));
         message = parts.join(' · ');
       } else {
         const parts: string[] = [];
-        if (kmRemaining != null) parts.push(`${Math.round(kmRemaining)} km left`);
-        if (daysRemaining != null) parts.push(`${daysRemaining} days left`);
+        if (kmRemaining != null) parts.push(t('reminders.kmLeft', { count: Math.round(kmRemaining) }));
+        if (daysRemaining != null) parts.push(t('reminders.daysLeft', { count: daysRemaining }));
         if (parts.length > 0) message = parts.join(' · ');
       }
 

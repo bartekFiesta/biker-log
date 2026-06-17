@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { CURRENCY_OPTIONS, isKnownCurrency, normalizeCurrency } from '@/lib/currencies';
+import { useI18n } from '@/lib/i18n/context';
 
 interface CurrencyPickerProps {
   value: string;
@@ -10,12 +11,13 @@ interface CurrencyPickerProps {
 }
 
 export default function CurrencyPicker({ value, onChange }: CurrencyPickerProps) {
+  const { t } = useI18n();
   const normalized = normalizeCurrency(value);
   const showCustom = value.length > 0 && !isKnownCurrency(value);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Currency</Text>
+      <Text style={styles.label}>{t('currency.label')}</Text>
       <View style={styles.grid}>
         {CURRENCY_OPTIONS.map((code) => (
           <Pressable
@@ -27,17 +29,17 @@ export default function CurrencyPicker({ value, onChange }: CurrencyPickerProps)
         ))}
       </View>
 
-      <Text style={styles.customLabel}>Other (3-letter code)</Text>
+      <Text style={styles.customLabel}>{t('currency.other')}</Text>
       <TextInput
         style={[styles.input, showCustom && styles.inputActive]}
         value={showCustom ? normalized : ''}
         onChangeText={(text) => onChange(normalizeCurrency(text))}
         autoCapitalize="characters"
         maxLength={6}
-        placeholder="e.g. JPY"
+        placeholder={t('currency.placeholder')}
         placeholderTextColor={Colors.dark.muted}
       />
-      <Text style={styles.hint}>Used for refueling prices. Default is USD.</Text>
+      <Text style={styles.hint}>{t('currency.hint')}</Text>
     </View>
   );
 }

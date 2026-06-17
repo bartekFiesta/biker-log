@@ -7,12 +7,14 @@ import ServiceForm from '@/components/ServiceForm';
 import Colors from '@/constants/Colors';
 import { getServiceRecord, updateServiceRecord } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
+import { useI18n } from '@/lib/i18n/context';
 import type { ServiceType } from '@/lib/types';
 
 export default function EditServiceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { refresh } = useDatabase();
+  const { t } = useI18n();
   const [type, setType] = useState<ServiceType>('oil');
   const [odometer, setOdometer] = useState('');
   const [notes, setNotes] = useState('');
@@ -26,7 +28,7 @@ export default function EditServiceScreen() {
       if (!Number.isFinite(recordId)) return;
       const record = await getServiceRecord(recordId);
       if (!record) {
-        Alert.alert('Not found', 'Service record not found.');
+        Alert.alert(t('common.notFound'), t('service.notFound'));
         router.back();
         return;
       }
@@ -36,13 +38,13 @@ export default function EditServiceScreen() {
       setOdometer(String(Math.round(record.odometer_km)));
       setNotes(record.notes ?? '');
     })();
-  }, [id, router]);
+  }, [id, router, t]);
 
   const handleSave = async () => {
     const recordId = Number(id);
     const odometerValue = Number(odometer.replace(',', '.'));
     if (!Number.isFinite(odometerValue) || odometerValue <= 0) {
-      Alert.alert('Error', 'Enter a valid odometer reading.');
+      Alert.alert(t('common.error'), t('service.odometerInvalid'));
       return;
     }
 
@@ -69,7 +71,11 @@ export default function EditServiceScreen() {
         onOdometerChange={setOdometer}
         onNotesChange={setNotes}
       />
-      <PrimaryButton label={saving ? 'Saving...' : 'Save changes'} onPress={handleSave} disabled={saving} />
+      <PrimaryButton
+        label={saving ? t('common.saving') : t('service.saveChanges')}
+        onPress={handleSave}
+        disabled={saving}
+      />
     </ScrollView>
   );
 }

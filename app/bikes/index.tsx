@@ -13,11 +13,13 @@ import {
   updateBike,
 } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
+import { useI18n } from '@/lib/i18n/context';
 import type { Bike } from '@/lib/types';
 
 export default function BikesScreen() {
   const router = useRouter();
   const { refreshKey, refresh } = useDatabase();
+  const { t } = useI18n();
   const [bikes, setBikes] = useState<Bike[]>([]);
   const [activeBikeId, setActiveBikeIdState] = useState(1);
   const [newName, setNewName] = useState('');
@@ -47,11 +49,11 @@ export default function BikesScreen() {
   const handleAdd = async () => {
     const tank = Number(newTank.replace(',', '.'));
     if (!newName.trim()) {
-      Alert.alert('Error', 'Enter a motorcycle name.');
+      Alert.alert(t('common.error'), t('bikes.nameInvalid'));
       return;
     }
     if (!Number.isFinite(tank) || tank <= 0) {
-      Alert.alert('Error', 'Enter a valid tank capacity.');
+      Alert.alert(t('common.error'), t('bikes.tankInvalid'));
       return;
     }
     setAdding(true);
@@ -72,7 +74,7 @@ export default function BikesScreen() {
   const handleRename = async (bike: Bike) => {
     if (editingId === bike.id) {
       if (!editName.trim()) {
-        Alert.alert('Error', 'Enter a name.');
+        Alert.alert(t('common.error'), t('bikes.nameInvalid'));
         return;
       }
       await updateBike(bike.id, { name: editName.trim() });
@@ -86,24 +88,23 @@ export default function BikesScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.hint}>
-        Switch between motorcycles. Each bike has its own fuel, rides, and service history.
-      </Text>
+      <Text style={styles.hint}>{t('bikes.intro')}</Text>
 
       {bikes.map((bike) => (
         <View key={bike.id} style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>{bike.name}</Text>
             {bike.id === activeBikeId ? (
-              <Text style={styles.activeBadge}>Active</Text>
+              <Text style={styles.activeBadge}>{t('common.active')}</Text>
             ) : (
               <Pressable onPress={() => void handleSwitch(bike.id)}>
-                <Text style={styles.switchLink}>Switch</Text>
+                <Text style={styles.switchLink}>{t('common.switch')}</Text>
               </Pressable>
             )}
           </View>
           <Text style={styles.cardMeta}>
-            Tank {bike.tank_capacity_l} L · Reserve {bike.reserve_threshold_l} L
+            {t('bikes.tank', { liters: bike.tank_capacity_l })} ·{' '}
+            {t('bikes.reserve', { liters: bike.reserve_threshold_l })}
           </Text>
           {editingId === bike.id ? (
             <View style={styles.renameRow}>
@@ -111,32 +112,41 @@ export default function BikesScreen() {
                 style={styles.renameInput}
                 value={editName}
                 onChangeText={setEditName}
-                placeholder="Name"
+                placeholder={t('onboarding.bikeName')}
                 placeholderTextColor={Colors.dark.muted}
               />
               <Pressable onPress={() => void handleRename(bike)}>
-                <Text style={styles.renameLink}>Save</Text>
+                <Text style={styles.renameLink}>{t('common.save')}</Text>
               </Pressable>
             </View>
           ) : (
             <Pressable onPress={() => void handleRename(bike)}>
-              <Text style={styles.renameLink}>Rename</Text>
+              <Text style={styles.renameLink}>{t('common.rename')}</Text>
             </Pressable>
           )}
         </View>
       ))}
 
-      <Text style={styles.sectionTitle}>Add motorcycle</Text>
-      <Field label="Name" value={newName} onChangeText={setNewName} placeholder="Second bike" />
+      <Text style={styles.sectionTitle}>{t('bikes.addBike')}</Text>
       <Field
-        label="Tank capacity (L)"
+        label={t('onboarding.bikeName')}
+        value={newName}
+        onChangeText={setNewName}
+        placeholder={t('onboarding.placeholderName')}
+      />
+      <Field
+        label={t('settings.tankSize')}
         value={newTank}
         onChangeText={setNewTank}
         keyboardType="decimal-pad"
-        placeholder="17"
+        placeholder={t('onboarding.placeholderTank')}
       />
-      <PrimaryButton label={adding ? 'Adding...' : 'Add motorcycle'} onPress={handleAdd} disabled={adding} />
-      <PrimaryButton label="Back to settings" onPress={() => router.back()} variant="secondary" />
+      <PrimaryButton
+        label={adding ? t('bikes.adding') : t('bikes.addBike')}
+        onPress={handleAdd}
+        disabled={adding}
+      />
+      <PrimaryButton label={t('bikes.back')} onPress={() => router.back()} variant="secondary" />
     </ScrollView>
   );
 }

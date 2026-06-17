@@ -9,11 +9,13 @@ import Colors from '@/constants/Colors';
 import { normalizeCurrency } from '@/lib/currencies';
 import { completeOnboarding } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
+import { useI18n } from '@/lib/i18n/context';
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const { refresh } = useDatabase();
-  const [bikeName, setBikeName] = useState('My motorcycle');
+  const { t } = useI18n();
+  const [bikeName, setBikeName] = useState('');
   const [tankCapacity, setTankCapacity] = useState('');
   const [odometer, setOdometer] = useState('');
   const [consumption, setConsumption] = useState('');
@@ -23,25 +25,25 @@ export default function OnboardingScreen() {
   const handleContinue = async () => {
     const tank = Number(tankCapacity.replace(',', '.'));
     if (!Number.isFinite(tank) || tank <= 0) {
-      Alert.alert('Required', 'Enter your tank capacity in liters (e.g. 17).');
+      Alert.alert(t('common.required'), t('onboarding.tankRequired'));
       return;
     }
 
     const odometerValue = odometer.trim() ? Number(odometer.replace(',', '.')) : null;
     if (odometer.trim() && (!Number.isFinite(odometerValue) || odometerValue! <= 0)) {
-      Alert.alert('Error', 'Enter a valid current odometer reading.');
+      Alert.alert(t('common.error'), t('onboarding.odometerInvalid'));
       return;
     }
 
     const consumptionValue = Number(consumption.replace(',', '.'));
     if (!Number.isFinite(consumptionValue) || consumptionValue <= 0) {
-      Alert.alert('Required', 'Enter your average fuel consumption (e.g. 5.5 L/100 km).');
+      Alert.alert(t('common.required'), t('onboarding.consumptionRequired'));
       return;
     }
 
     setSaving(true);
     await completeOnboarding(
-      bikeName.trim() || 'My motorcycle',
+      bikeName.trim() || t('onboarding.placeholderName'),
       tank,
       normalizeCurrency(currency),
       odometerValue,
@@ -54,36 +56,45 @@ export default function OnboardingScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>Welcome to Biker Log</Text>
-      <Text style={styles.subheading}>Set up your motorcycle before the first ride.</Text>
+      <Text style={styles.heading}>{t('onboarding.heading')}</Text>
+      <Text style={styles.subheading}>{t('onboarding.subheading')}</Text>
 
-      <Field label="Motorcycle name" value={bikeName} onChangeText={setBikeName} placeholder="My motorcycle" />
       <Field
-        label="Tank capacity (liters) *"
+        label={t('onboarding.bikeName')}
+        value={bikeName}
+        onChangeText={setBikeName}
+        placeholder={t('onboarding.placeholderName')}
+      />
+      <Field
+        label={t('onboarding.tankCapacity')}
         value={tankCapacity}
         onChangeText={setTankCapacity}
         keyboardType="decimal-pad"
-        placeholder="e.g. 17"
+        placeholder={t('onboarding.placeholderTank')}
       />
       <Field
-        label="Average fuel consumption (L/100 km) *"
+        label={t('onboarding.consumption')}
         value={consumption}
         onChangeText={setConsumption}
         keyboardType="decimal-pad"
-        placeholder="e.g. 5.5"
-        hint="Used to estimate fuel in the tank until two full-tank refuelings are logged."
+        placeholder={t('onboarding.placeholderConsumption')}
+        hint={t('onboarding.consumptionHint')}
       />
       <Field
-        label="Current odometer (km, optional)"
+        label={t('onboarding.odometer')}
         value={odometer}
         onChangeText={setOdometer}
         keyboardType="decimal-pad"
-        placeholder="e.g. 12500"
-        hint="Baseline for fuel and service tracking."
+        placeholder={t('onboarding.placeholderOdometer')}
+        hint={t('onboarding.odometerHint')}
       />
       <CurrencyPicker value={currency} onChange={setCurrency} />
 
-      <PrimaryButton label={saving ? 'Saving...' : 'Continue'} onPress={handleContinue} disabled={saving} />
+      <PrimaryButton
+        label={saving ? t('common.saving') : t('onboarding.continue')}
+        onPress={handleContinue}
+        disabled={saving}
+      />
     </ScrollView>
   );
 }
