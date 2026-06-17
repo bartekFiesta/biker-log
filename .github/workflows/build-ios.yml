@@ -3,11 +3,12 @@ name: Build iOS IPA
 on:
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: macos-26
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -66,7 +67,7 @@ jobs:
           zip -r $RUNNER_TEMP/BikerLog-unsigned.ipa Payload
 
       - name: Upload IPA
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: BikerLog-iOS
           path: ${{ runner.temp }}/BikerLog-unsigned.ipa
