@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Biker Log — iPhone (Safari)</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #121212; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card { max-width: 460px; width: 100%; text-align: center; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    .badge {
+      display: inline-block; background: #1e3a1e; color: #8fdf8f;
+      padding: 6px 12px; border-radius: 999px; font-size: 13px; margin-bottom: 16px;
+    }
+    .url { font-size: 20px; color: #ff6b35; font-weight: 700; margin: 16px 0; word-break: break-all; }
+    .steps { text-align: left; font-size: 14px; color: #ccc; line-height: 1.6; margin: 16px 0; }
+    .steps li { margin-bottom: 6px; }
+    img { width: 360px; max-width: 100%; border-radius: 16px; background: #fff; padding: 8px; }
+    .hint { font-size: 13px; color: #666; margin-top: 16px; line-height: 1.5; }
+    strong { color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Biker Log</h1>
+    <div class="badge">Bez Expo Go</div>
+    <ol class="steps">
+      <li>iPhone i komputer na <strong>tym samym Wi‑Fi</strong></li>
+      <li>Na iPhone: Safari → wpisz adres lub zeskanuj QR aparatem</li>
+      <li>Stuknij <strong>Otwórz Biker Log</strong></li>
+    </ol>
+    <p class="url">http://192.168.50.38:8888</p>
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=8&data=http%3A%2F%2F192.168.50.38%3A8888" alt="QR" width="360" height="360" />
+    <p class="hint">Bezpośredni link: http://192.168.50.38:8081<br />Pełna apka iOS: <code>npm run build:ios</code></p>
+  </div>
+</body>
+</html>
