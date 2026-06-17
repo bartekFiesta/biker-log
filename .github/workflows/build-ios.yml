@@ -1,0 +1,61 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Prebuild iOS
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+
+      - name: Build IPA (unsigned)
+        run: |
+          cd ios
+          xcodebuild \
+            -workspace *.xcworkspace \
+            -scheme "bikerlog" \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath build/BikerLog.xcarchive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            archive
+
+          xcodebuild \
+            -exportArchive \
+            -archivePath build/BikerLog.xcarchive \
+            -exportPath build/output \
+            -exportOptionsPlist ../scripts/ExportOptions.plist
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: BikerLog-iOS
+          path: ios/build/output/*.ipa
+          retention-days: 7
