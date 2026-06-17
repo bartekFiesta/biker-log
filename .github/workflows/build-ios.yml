@@ -43,27 +43,31 @@ jobs:
         run: |
           cd ios
           WORKSPACE=$(ls -d *.xcworkspace | head -1)
+          
           xcodebuild \
             -workspace "$WORKSPACE" \
             -scheme "BikerLog" \
             -configuration Release \
             -sdk iphoneos \
-            -archivePath build/BikerLog.xcarchive \
+            -archivePath $RUNNER_TEMP/BikerLog.xcarchive \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_ENTITLEMENTS="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            DEVELOPMENT_TEAM="" \
             archive
 
-          APP_PATH=$(find build/BikerLog.xcarchive/Products/Applications -maxdepth 1 -name "*.app" | head -1)
-          mkdir -p build/output/Payload
-          cp -R "$APP_PATH" build/output/Payload/
-          cd build/output
-          zip -r BikerLog.ipa Payload
-          rm -rf Payload
+          # Extract .app and package as unsigned .ipa
+          APP_PATH=$(find $RUNNER_TEMP/BikerLog.xcarchive -name "*.app" | head -1)
+          mkdir -p $RUNNER_TEMP/ipa/Payload
+          cp -r "$APP_PATH" $RUNNER_TEMP/ipa/Payload/
+          cd $RUNNER_TEMP/ipa
+          zip -r $RUNNER_TEMP/BikerLog-unsigned.ipa Payload
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: BikerLog-iOS
-          path: ios/build/output/BikerLog.ipa
+          path: ${{ runner.temp }}/BikerLog-unsigned.ipa
           retention-days: 7
