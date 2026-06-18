@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, View, Alert } from 'react-native';
 
 import PrimaryButton from '@/components/PrimaryButton';
 import { ReminderList } from '@/components/ReminderCard';
@@ -33,7 +33,7 @@ import type { ServiceReminderStatus } from '@/lib/types';
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { refreshKey } = useDatabase();
+  const { refreshKey, refresh } = useDatabase();
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [activeRide, setActiveRide] = useState(false);
@@ -78,7 +78,7 @@ export default function DashboardScreen() {
 
     const lastRefuel = refuelings[0];
     const lastService = services[0];
-    const activeId = rideTracker.getRideId();
+    const activeId = rideTracker.getRideId() ?? (await rideTracker.ensureRestored());
 
     setBikeName(bike.name);
     setParkedAt(settings.parked_at);
@@ -143,6 +143,29 @@ export default function DashboardScreen() {
     );
   };
 
+  const handleQuickStop = () => {
+    Alert.alert(t('rides.stopTitle'), t('rides.stopMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('rideActive.stop'),
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            try {
+              await rideTracker.stopQuick();
+              refresh();
+            } catch (error) {
+              Alert.alert(
+                t('common.error'),
+                error instanceof Error ? error.message : t('rideActive.stopFailed')
+              );
+            }
+          })();
+        },
+      },
+    ]);
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>{t('dashboard.title')}</Text>
@@ -202,6 +225,14 @@ export default function DashboardScreen() {
         onPress={() => router.push('/ride/active')}
         disabled={loading}
       />
+      {activeRide ? (
+        <PrimaryButton
+          label={t('dashboard.stopRide')}
+          onPress={handleQuickStop}
+          variant="danger"
+          disabled={loading}
+        />
+      ) : null}
     </ScrollView>
   );
 }

@@ -37,6 +37,8 @@ const es = {
     oil: 'Cambio de aceite',
     brake_front: 'Pastillas freno delantero',
     brake_rear: 'Pastillas freno trasero',
+    tyre_front: 'Neumático delantero',
+    tyre_rear: 'Neumático trasero',
     insurance: 'Seguro',
     road_tax: 'Impuesto de circulación',
     other: 'Otro',
@@ -101,6 +103,7 @@ const es = {
     returnPaused: 'Volver a ruta en pausa',
     returnActive: 'Volver a ruta activa',
     startRide: 'Iniciar ruta',
+    stopRide: 'Finalizar ruta',
   },
   settings: {
     motorcycle: 'Moto',
@@ -162,6 +165,8 @@ const es = {
     odometer: 'Odómetro: {{value}}',
     deleteTitle: 'Eliminar ruta',
     deleteMessage: '¿Seguro que quieres eliminar esta ruta?',
+    stopTitle: '¿Finalizar ruta?',
+    stopMessage: 'Guarda esta ruta en el historial con la distancia GPS registrada hasta ahora.',
   },
   rideActive: {
     ready: 'Listo para empezar',
@@ -184,6 +189,7 @@ const es = {
     stop: 'Detener ruta',
     odometerStartInvalid: 'Introduce un odómetro inicial válido.',
     odometerEndInvalid: 'Introduce un odómetro final válido.',
+    tollsInvalid: 'Introduce un importe de peajes válido.',
     startFailed: 'No se pudo iniciar la ruta.',
     pauseFailed: 'No se pudo pausar la ruta.',
     resumeFailed: 'No se pudo reanudar la ruta.',

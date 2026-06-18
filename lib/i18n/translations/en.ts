@@ -37,6 +37,8 @@ const en = {
     oil: 'Oil change',
     brake_front: 'Front brake pads',
     brake_rear: 'Rear brake pads',
+    tyre_front: 'Front tyre',
+    tyre_rear: 'Rear tyre',
     insurance: 'Insurance',
     road_tax: 'Road tax',
     other: 'Other',
@@ -101,6 +103,7 @@ const en = {
     returnPaused: 'Return to paused ride',
     returnActive: 'Return to active ride',
     startRide: 'Start ride',
+    stopRide: 'Stop ride',
   },
   settings: {
     motorcycle: 'Motorcycle',
@@ -160,6 +163,8 @@ const en = {
     odometer: 'Odometer: {{value}}',
     deleteTitle: 'Delete ride',
     deleteMessage: 'Are you sure you want to delete this ride?',
+    stopTitle: 'Stop ride?',
+    stopMessage: 'Save this ride to your history with the GPS distance recorded so far.',
   },
   rideActive: {
     ready: 'Ready to start',
@@ -182,6 +187,7 @@ const en = {
     stop: 'Stop ride',
     odometerStartInvalid: 'Enter a valid starting odometer reading.',
     odometerEndInvalid: 'Enter a valid ending odometer reading.',
+    tollsInvalid: 'Enter a valid tolls amount.',
     startFailed: 'Could not start ride.',
     pauseFailed: 'Could not pause ride.',
     resumeFailed: 'Could not resume ride.',

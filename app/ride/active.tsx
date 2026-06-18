@@ -6,7 +6,7 @@ import MapRoute from '@/components/MapRoute';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
-import { getLatestOdometer, getSettings } from '@/lib/db';
+import { getActiveRide, getLatestOdometer, getSettings } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
 import { formatDurationMs } from '@/lib/format';
 import { useI18n } from '@/lib/i18n/context';
@@ -39,8 +39,22 @@ export default function ActiveRideScreen() {
 
   useEffect(() => {
     void (async () => {
-      const [latest, settings] = await Promise.all([getLatestOdometer(), getSettings()]);
-      if (latest != null) setOdometerStart(String(Math.round(latest)));
+      const [latest, settings, active] = await Promise.all([
+        getLatestOdometer(),
+        getSettings(),
+        getActiveRide(),
+      ]);
+
+      if (active && rideTracker.getRideId() == null) {
+        await rideTracker.restore();
+      }
+
+      if (active?.odometer_start != null) {
+        setOdometerStart(String(Math.round(active.odometer_start)));
+      } else if (latest != null) {
+        setOdometerStart(String(Math.round(latest)));
+      }
+
       setDistanceUnit(settings.distance_unit);
 
       if (rideTracker.getRideId() != null) {
@@ -124,11 +138,22 @@ export default function ActiveRideScreen() {
         Alert.alert(t('common.error'), t('rideActive.odometerEndInvalid'));
         return;
       }
-      await rideTracker.stop(
-        endValue,
-        label.trim() || null,
-        tolls.trim() ? Number(tolls.replace(',', '.')) : null
-      );
+
+      const tollsValue = tolls.trim() ? Number(tolls.replace(',', '.')) : null;
+      if (tolls.trim() && !Number.isFinite(tollsValue)) {
+        Alert.alert(t('common.error'), t('rideActive.tollsInvalid'));
+        return;
+      }
+
+      let resolvedEnd = endValue;
+      if (resolvedEnd == null && odometerStart.trim()) {
+        const startValue = Number(odometerStart.replace(',', '.'));
+        if (Number.isFinite(startValue)) {
+          resolvedEnd = startValue + distanceKm;
+        }
+      }
+
+      await rideTracker.stop(resolvedEnd, label.trim() || null, tollsValue);
       refresh();
       router.back();
     } catch (error) {

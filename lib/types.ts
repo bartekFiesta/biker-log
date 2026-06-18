@@ -2,6 +2,8 @@ export type ServiceType =
   | 'oil'
   | 'brake_front'
   | 'brake_rear'
+  | 'tyre_front'
+  | 'tyre_rear'
   | 'insurance'
   | 'road_tax'
   | 'other';
@@ -88,6 +90,8 @@ export type ReminderServiceType =
   | 'oil'
   | 'brake_front'
   | 'brake_rear'
+  | 'tyre_front'
+  | 'tyre_rear'
   | 'insurance'
   | 'road_tax';
 
@@ -165,6 +169,8 @@ export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
   oil: 'Oil change',
   brake_front: 'Front brake pads',
   brake_rear: 'Rear brake pads',
+  tyre_front: 'Front tyre',
+  tyre_rear: 'Rear tyre',
   insurance: 'Insurance',
   road_tax: 'Road tax',
   other: 'Other',
@@ -174,6 +180,8 @@ export const REMINDER_SERVICE_TYPES: ReminderServiceType[] = [
   'oil',
   'brake_front',
   'brake_rear',
+  'tyre_front',
+  'tyre_rear',
   'insurance',
   'road_tax',
 ];
@@ -182,6 +190,8 @@ export const SERVICE_TYPES: ServiceType[] = [
   'oil',
   'brake_front',
   'brake_rear',
+  'tyre_front',
+  'tyre_rear',
   'insurance',
   'road_tax',
   'other',

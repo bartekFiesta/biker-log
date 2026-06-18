@@ -26,7 +26,8 @@ export default function RidesScreen() {
     const [data, settings] = await Promise.all([getRides(), getSettings()]);
     setRides(data.filter((ride) => ride.ended_at != null));
     setDistanceUnit(settings.distance_unit);
-    setActiveRide(rideTracker.getRideId() != null);
+    const activeId = rideTracker.getRideId() ?? (await rideTracker.ensureRestored());
+    setActiveRide(activeId != null);
     setActiveRidePaused(rideTracker.isPaused());
   }, [refreshKey]);
 
@@ -50,6 +51,29 @@ export default function RidesScreen() {
     ]);
   };
 
+  const handleQuickStop = () => {
+    Alert.alert(t('rides.stopTitle'), t('rides.stopMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('rideActive.stop'),
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            try {
+              await rideTracker.stopQuick();
+              refresh();
+            } catch (error) {
+              Alert.alert(
+                t('common.error'),
+                error instanceof Error ? error.message : t('rideActive.stopFailed')
+              );
+            }
+          })();
+        },
+      },
+    ]);
+  };
+
   return (
     <View style={styles.container}>
       {activeRide ? (
@@ -58,6 +82,11 @@ export default function RidesScreen() {
             {activeRidePaused ? t('rides.pausedBanner') : t('rides.recordingBanner')}
           </Text>
           <PrimaryButton label={t('common.open')} onPress={() => router.push('/ride/active')} />
+          <PrimaryButton
+            label={t('dashboard.stopRide')}
+            onPress={handleQuickStop}
+            variant="danger"
+          />
         </View>
       ) : (
         <View style={styles.header}>

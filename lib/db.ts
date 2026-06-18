@@ -198,6 +198,8 @@ async function migrateServiceReminderRules(db: SQLite.SQLiteDatabase): Promise<v
     ['oil', 5000, 365],
     ['brake_front', 15000, null],
     ['brake_rear', 15000, null],
+    ['tyre_front', 8000, null],
+    ['tyre_rear', 12000, null],
     ['insurance', null, 365],
     ['road_tax', null, 365],
   ];
@@ -564,9 +566,9 @@ export async function finishRide(
   tollsCost: number | null = null
 ): Promise<void> {
   const db = await getDatabase();
-  await db.runAsync(
+  const result = await db.runAsync(
     `UPDATE rides SET ended_at = ?, route_points = ?, distance_gps_km = ?, odometer_end = ?,
-     is_paused = 0, paused_duration_ms = ?, label = ?, tolls_cost = ? WHERE id = ?`,
+     is_paused = 0, paused_duration_ms = ?, label = ?, tolls_cost = ? WHERE id = ? AND ended_at IS NULL`,
     new Date().toISOString(),
     JSON.stringify(routePoints),
     distanceGpsKm,
@@ -576,6 +578,9 @@ export async function finishRide(
     tollsCost,
     id
   );
+  if (result.changes === 0) {
+    throw new Error('Ride already finished or not found');
+  }
 
   const last = routePoints[routePoints.length - 1];
   if (last) {

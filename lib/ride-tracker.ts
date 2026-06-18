@@ -75,6 +75,11 @@ export class RideTracker {
     return Math.max(0, Date.now() - this.rideStartedAt - this.getTotalPausedDurationMs());
   }
 
+  async ensureRestored(): Promise<number | null> {
+    if (this.rideId != null) return this.rideId;
+    return this.restore();
+  }
+
   async restore(): Promise<number | null> {
     const active = await getActiveRide();
     if (!active) return null;
@@ -222,6 +227,12 @@ export class RideTracker {
   async start(odometerStart: number | null): Promise<number> {
     if (this.rideId != null) return this.rideId;
 
+    const existing = await getActiveRide();
+    if (existing) {
+      const restored = await this.restore();
+      if (restored != null) return restored;
+    }
+
     const { createRide } = await import('./db');
     const ride = await createRide(odometerStart);
     this.rideId = ride.id;
@@ -259,11 +270,29 @@ export class RideTracker {
     this.notify();
   }
 
+  async stopQuick(): Promise<void> {
+    await this.ensureRestored();
+    if (this.rideId == null) {
+      throw new Error('No active ride');
+    }
+
+    const active = await getActiveRide();
+    let odometerEnd: number | null = null;
+    if (active?.odometer_start != null) {
+      odometerEnd = active.odometer_start + routeDistanceKm(this.points);
+    }
+
+    await this.stop(odometerEnd, active?.label ?? null, active?.tolls_cost ?? null);
+  }
+
   async stop(
     odometerEnd: number | null,
     label: string | null = null,
     tollsCost: number | null = null
   ): Promise<void> {
+    if (this.rideId == null) {
+      await this.ensureRestored();
+    }
     if (this.rideId == null) return;
 
     if (this.paused && this.pauseStartedAt != null) {
