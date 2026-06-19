@@ -56,6 +56,10 @@ export class AutoRideDetector {
     );
   }
 
+  stopMonitoring() {
+    this.stop();
+  }
+
   private stop() {
     this.subscription?.remove();
     this.subscription = null;

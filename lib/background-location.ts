@@ -3,6 +3,10 @@ import * as Location from 'expo-location';
 import { BACKGROUND_RIDE_TASK } from './background-ride-task';
 import { isWeb } from './platform';
 
+export async function stopBackgroundRideDetection(): Promise<void> {
+  await syncBackgroundRideDetection(false);
+}
+
 export async function syncBackgroundRideDetection(enabled: boolean): Promise<void> {
   if (isWeb) return;
   const hasStarted = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_RIDE_TASK).catch(
