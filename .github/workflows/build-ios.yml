@@ -45,9 +45,12 @@ jobs:
           pod install
 
       - name: Build IPA (unsigned)
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
         run: |
           cd ios
           WORKSPACE=$(ls -d *.xcworkspace | head -1)
+          IPA_NAME="BikerLog-ios-build-${BUILD_NUMBER}.ipa"
           
           xcodebuild \
             -workspace "$WORKSPACE" \
@@ -68,13 +71,14 @@ jobs:
           mkdir -p $RUNNER_TEMP/ipa/Payload
           cp -r "$APP_PATH" $RUNNER_TEMP/ipa/Payload/
           cd $RUNNER_TEMP/ipa
-          zip -r $RUNNER_TEMP/BikerLog-unsigned.ipa Payload
+          zip -r $RUNNER_TEMP/$IPA_NAME Payload
+          echo "IPA_NAME=$IPA_NAME" >> $GITHUB_ENV
 
       - name: Publish IPA to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ios-build-${{ github.run_number }}
           name: BikerLog iOS build ${{ github.run_number }}
-          files: ${{ runner.temp }}/BikerLog-unsigned.ipa
+          files: ${{ runner.temp }}/${{ env.IPA_NAME }}
           prerelease: true
           make_latest: false
