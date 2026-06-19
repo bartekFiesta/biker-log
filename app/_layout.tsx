@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
+import '@/lib/ride-tracker';
 import { DatabaseProvider } from '@/lib/database-context';
 import Colors from '@/constants/Colors';
 import { I18nProvider, useI18n } from '@/lib/i18n/context';

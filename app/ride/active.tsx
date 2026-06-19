@@ -1,3 +1,4 @@
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, StyleSheet, TextInput, View } from 'react-native';
@@ -29,6 +30,7 @@ export default function ActiveRideScreen() {
   const [tolls, setTolls] = useState('');
   const [distanceUnit, setDistanceUnit] = useState<'km' | 'mi'>('km');
   const [loading, setLoading] = useState(false);
+  const [locationGranted, setLocationGranted] = useState<boolean | null>(null);
 
   const stateLabel =
     state === 'recording'
@@ -48,6 +50,13 @@ export default function ActiveRideScreen() {
       if (active && rideTracker.getRideId() == null) {
         await rideTracker.restore();
       }
+
+      if (rideTracker.getRideId() != null) {
+        await rideTracker.ensureTracking();
+      }
+
+      const permission = await Location.getForegroundPermissionsAsync();
+      setLocationGranted(permission.granted);
 
       if (active?.odometer_start != null) {
         setOdometerStart(String(Math.round(active.odometer_start)));
@@ -183,6 +192,13 @@ export default function ActiveRideScreen() {
               : ''}
           </Text>
         ) : null}
+        {isActive ? (
+          <Text style={styles.gpsStatus}>
+            {t('rideActive.gpsPoints', { count: points.length })}
+            {locationGranted === false ? ` · ${t('rideActive.locationDenied')}` : ''}
+            {locationGranted !== false && points.length === 0 ? ` · ${t('rideActive.gpsWaiting')}` : ''}
+          </Text>
+        ) : null}
       </View>
 
       <MapRoute points={points} height={240} />
@@ -300,6 +316,11 @@ const styles = StyleSheet.create({
   timing: {
     color: Colors.dark.muted,
     fontSize: 13,
+  },
+  gpsStatus: {
+    color: Colors.dark.muted,
+    fontSize: 12,
+    textAlign: 'center',
   },
   form: {
     gap: 10,

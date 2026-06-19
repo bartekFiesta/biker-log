@@ -53,7 +53,12 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
         await import('@/lib/background-ride-task');
       }
       await getDatabase();
-      await rideTracker.restore();
+      try {
+        await rideTracker.restore();
+        await rideTracker.ensureTracking();
+      } catch {
+        // Keep app usable even if ride restore fails.
+      }
       await bootstrapAppData();
       if (mounted) setReady(true);
     })();

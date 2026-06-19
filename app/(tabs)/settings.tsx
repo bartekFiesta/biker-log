@@ -7,6 +7,7 @@ import CurrencyPicker from '@/components/CurrencyPicker';
 import { ToggleRow } from '@/components/ReminderCard';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
+import { getAppVersionLabel } from '@/lib/app-info';
 import { autoRideDetector } from '@/lib/auto-ride-detector';
 import { syncBackgroundRideDetection } from '@/lib/background-location';
 import { normalizeCurrency } from '@/lib/currencies';
@@ -306,6 +307,11 @@ export default function SettingsScreen() {
         variant="secondary"
         disabled={importing}
       />
+
+      <View style={styles.versionBox}>
+        <Text style={styles.versionLabel}>{t('settings.appVersion')}</Text>
+        <Text style={styles.versionValue}>{getAppVersionLabel()}</Text>
+      </View>
     </ScrollView>
   );
 }
@@ -462,4 +468,14 @@ const styles = StyleSheet.create({
   ruleTitle: { fontSize: 15, fontWeight: '600' },
   ruleToggle: { color: Colors.dark.muted, fontWeight: '700' },
   ruleToggleOn: { color: Colors.dark.tint },
+  versionBox: {
+    marginTop: 8,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.dark.border,
+    alignItems: 'center',
+    gap: 4,
+  },
+  versionLabel: { fontSize: 12, color: Colors.dark.muted },
+  versionValue: { fontSize: 14, fontWeight: '600', color: Colors.dark.text },
 });

@@ -36,6 +36,18 @@ jobs:
           expo-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
+      - name: Set iOS build number
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          node -e "
+          const fs = require('fs');
+          const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+          app.expo.ios.buildNumber = String(process.env.BUILD_NUMBER);
+          app.expo.android.versionCode = Number(process.env.BUILD_NUMBER);
+          fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
+          "
+
       - name: Prebuild iOS
         run: npx expo prebuild --platform ios --clean
 

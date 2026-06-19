@@ -144,6 +144,7 @@ const en = {
     exportFailed: 'Could not export data.',
     importComplete: 'Imported {{fuel}} refuelings and {{service}} service records.',
     importFailed: 'Could not import data.',
+    appVersion: 'App version',
   },
   bikes: {
     intro: 'Switch between motorcycles. Each bike has its own fuel, rides, and service history.',
@@ -193,6 +194,9 @@ const en = {
     resumeFailed: 'Could not resume ride.',
     stopFailed: 'Could not stop ride.',
     placeholderLabel: 'e.g. Commute',
+    gpsPoints: 'GPS points: {{count}}',
+    gpsWaiting: 'Waiting for GPS signal…',
+    locationDenied: 'Location permission required',
   },
   rideDetails: {
     loading: 'Loading...',

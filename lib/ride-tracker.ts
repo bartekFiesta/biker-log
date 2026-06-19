@@ -10,8 +10,9 @@ import type { RideRecordingState, RoutePoint } from './types';
 
 export const ACTIVE_RIDE_TASK = 'active-ride-tracking';
 
-const MIN_DISTANCE_M = 10;
-const MIN_INTERVAL_MS = 5000;
+const MIN_DISTANCE_M = 5;
+const MIN_INTERVAL_MS = 3000;
+const POLL_INTERVAL_MS = 8000;
 const isIos = Platform.OS === 'ios';
 
 export interface RideTrackerSnapshot {
@@ -32,6 +33,7 @@ export class RideTracker {
   private pausedDurationMs = 0;
   private pauseStartedAt: number | null = null;
   private rideStartedAt: number | null = null;
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
   private listeners = new Set<(snapshot: RideTrackerSnapshot) => void>();
 
   subscribe(listener: (snapshot: RideTrackerSnapshot) => void): () => void {
@@ -93,10 +95,30 @@ export class RideTracker {
 
     if (!this.paused) {
       await this.startWatching();
+      await this.seedCurrentLocation();
     }
 
     this.notify();
     return active.id;
+  }
+
+  isWatching(): boolean {
+    return this.watching;
+  }
+
+  getPointCount(): number {
+    return this.points.length;
+  }
+
+  async ensureTracking(): Promise<void> {
+    if (this.rideId == null || this.paused) return;
+
+    if (!this.watching || this.subscription == null) {
+      this.watching = false;
+      await this.startWatching(true);
+    }
+
+    await this.seedCurrentLocation();
   }
 
   getRideId(): number | null {
@@ -131,9 +153,37 @@ export class RideTracker {
     await syncBackgroundRideDetection(settings.background_auto_start);
   }
 
+  private stopPollTimer() {
+    if (this.pollTimer != null) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
+  private startPollTimer() {
+    this.stopPollTimer();
+    this.pollTimer = setInterval(() => {
+      void this.pollLocation();
+    }, POLL_INTERVAL_MS);
+  }
+
+  private async pollLocation() {
+    if (this.rideId == null || this.paused) return;
+
+    try {
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.BestForNavigation,
+      });
+      await this.handleLocation(location);
+    } catch {
+      // GPS may be unavailable briefly.
+    }
+  }
+
   private async stopWatching() {
     if (!this.watching) return;
 
+    this.stopPollTimer();
     this.subscription?.remove();
     this.subscription = null;
 
@@ -177,7 +227,7 @@ export class RideTracker {
       {
         accuracy: Location.Accuracy.BestForNavigation,
         timeInterval: MIN_INTERVAL_MS,
-        distanceInterval: MIN_DISTANCE_M,
+        distanceInterval: 1,
       },
       (location) => {
         void this.handleLocation(location);
@@ -197,8 +247,18 @@ export class RideTracker {
     }
   }
 
-  private async startWatching() {
-    if (this.watching) return;
+  private async startWatching(force = false) {
+    if (this.watching && !force) return;
+
+    if (force) {
+      this.stopPollTimer();
+      this.subscription?.remove();
+      this.subscription = null;
+      if (isIos) {
+        await this.stopActiveRideBackgroundTask();
+      }
+      this.watching = false;
+    }
 
     if (isIos) {
       await this.startIosWatching();
@@ -207,6 +267,7 @@ export class RideTracker {
     }
 
     this.watching = true;
+    this.startPollTimer();
   }
 
   async processLocationFromTask(location: Location.LocationObject): Promise<void> {
@@ -267,7 +328,10 @@ export class RideTracker {
     const existing = await getActiveRide();
     if (existing) {
       const restored = await this.restore();
-      if (restored != null) return restored;
+      if (restored != null) {
+        await this.ensureTracking();
+        return restored;
+      }
     }
 
     const { autoRideDetector } = await import('./auto-ride-detector');

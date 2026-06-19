@@ -146,6 +146,7 @@ const es = {
     exportFailed: 'No se pudieron exportar los datos.',
     importComplete: 'Importados {{fuel}} repostajes y {{service}} registros de servicio.',
     importFailed: 'No se pudieron importar los datos.',
+    appVersion: 'Versión de la app',
   },
   bikes: {
     intro: 'Cambia entre motos. Cada moto tiene su combustible, rutas e historial de servicio.',
@@ -195,6 +196,9 @@ const es = {
     resumeFailed: 'No se pudo reanudar la ruta.',
     stopFailed: 'No se pudo detener la ruta.',
     placeholderLabel: 'p. ej. Trabajo',
+    gpsPoints: 'Puntos GPS: {{count}}',
+    gpsWaiting: 'Esperando señal GPS…',
+    locationDenied: 'Se requiere permiso de ubicación',
   },
   rideDetails: {
     loading: 'Cargando...',
