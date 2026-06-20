@@ -129,6 +129,14 @@ async function migrateSettingsTable(db: SQLite.SQLiteDatabase): Promise<void> {
   if (!names.has('background_auto_start')) {
     await db.execAsync('ALTER TABLE settings ADD COLUMN background_auto_start INTEGER NOT NULL DEFAULT 0');
   }
+  if (!names.has('ride_detection_paused')) {
+    await db.execAsync(
+      'ALTER TABLE settings ADD COLUMN ride_detection_paused INTEGER NOT NULL DEFAULT 0'
+    );
+    await db.runAsync(
+      'UPDATE settings SET auto_start_rides = 1, background_auto_start = 1 WHERE id = 1'
+    );
+  }
   if (!names.has('notifications_enabled')) {
     await db.execAsync('ALTER TABLE settings ADD COLUMN notifications_enabled INTEGER NOT NULL DEFAULT 1');
   }
@@ -288,6 +296,7 @@ function mapSettings(row: Record<string, unknown>): Settings {
     app_language: ((row.app_language as string) ?? 'en') as Settings['app_language'],
     auto_start_rides: Boolean(row.auto_start_rides ?? 0),
     background_auto_start: Boolean(row.background_auto_start ?? 0),
+    ride_detection_paused: Boolean(row.ride_detection_paused ?? 0),
     notifications_enabled: Boolean(row.notifications_enabled ?? 1),
     onboarding_complete: Boolean(row.onboarding_complete ?? 0),
     parked_lat: (row.parked_lat as number | null) ?? null,
@@ -373,7 +382,8 @@ export async function updateSettings(partial: Partial<Omit<Settings, 'id'>>): Pr
 
   await db.runAsync(
     `UPDATE settings SET active_bike_id = ?, currency = ?, distance_unit = ?, volume_unit = ?,
-     app_language = ?, auto_start_rides = ?, background_auto_start = ?, notifications_enabled = ?, onboarding_complete = ?,
+     app_language = ?, auto_start_rides = ?, background_auto_start = ?, ride_detection_paused = ?,
+     notifications_enabled = ?, onboarding_complete = ?,
      parked_lat = ?, parked_lng = ?, parked_at = ? WHERE id = 1`,
     next.active_bike_id,
     next.currency,
@@ -382,6 +392,7 @@ export async function updateSettings(partial: Partial<Omit<Settings, 'id'>>): Pr
     next.app_language,
     next.auto_start_rides ? 1 : 0,
     next.background_auto_start ? 1 : 0,
+    next.ride_detection_paused ? 1 : 0,
     next.notifications_enabled ? 1 : 0,
     next.onboarding_complete ? 1 : 0,
     next.parked_lat,
@@ -705,5 +716,8 @@ export async function completeOnboarding(
     active_bike_id: 1,
     currency,
     onboarding_complete: true,
+    auto_start_rides: true,
+    background_auto_start: true,
+    ride_detection_paused: false,
   });
 }

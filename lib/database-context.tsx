@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 
 import { isNative } from './platform';
 import { autoRideDetector } from './auto-ride-detector';
-import { syncBackgroundRideDetection } from './background-location';
+import { syncRideDetection, setRideDetectionPaused, requestRideLocationPermissions } from './ride-detection';
 import { createTranslator } from './i18n';
 import {
   getLatestOdometer,
@@ -28,9 +28,7 @@ const DatabaseContext = createContext<DatabaseContextValue>({
 });
 
 async function bootstrapAppData(): Promise<void> {
-  const settings = await getSettings();
-  await autoRideDetector.sync();
-  await syncBackgroundRideDetection(settings.background_auto_start);
+  await syncRideDetection();
   const [rules, records, odometer] = await Promise.all([
     getServiceReminderRules(),
     getServiceRecords(),
@@ -54,10 +52,13 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
       }
       await getDatabase();
       try {
-        await rideTracker.restore({ startGps: false });
+        const { getActiveRide } = await import('./db');
+        const active = await getActiveRide();
+        await rideTracker.restore({ startGps: active != null });
       } catch {
         // Keep app usable even if ride restore fails.
       }
+      await requestRideLocationPermissions();
       await bootstrapAppData();
       if (mounted) setReady(true);
     })();

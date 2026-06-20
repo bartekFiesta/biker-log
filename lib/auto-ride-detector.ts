@@ -26,16 +26,7 @@ export class AutoRideDetector {
     }
   }
 
-  async sync(): Promise<void> {
-    const settings = await getSettings();
-    if (settings.auto_start_rides && rideTracker.getRideId() == null) {
-      await this.start();
-    } else {
-      this.stop();
-    }
-  }
-
-  private async start() {
+  async startMonitoring(): Promise<void> {
     if (this.running) return;
 
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -54,6 +45,19 @@ export class AutoRideDetector {
         void this.handleLocation(location);
       }
     );
+  }
+
+  async sync(): Promise<void> {
+    const settings = await getSettings();
+    if (settings.ride_detection_paused || rideTracker.getRideId() != null) {
+      this.stop();
+      return;
+    }
+    if (settings.auto_start_rides) {
+      await this.startMonitoring();
+    } else {
+      this.stop();
+    }
   }
 
   stopMonitoring() {
@@ -84,7 +88,8 @@ export class AutoRideDetector {
         const odometer = await getLatestOdometer();
         await rideTracker.start(odometer);
         this.notifyStarted();
-        void this.sync();
+        const { syncRideDetection } = await import('./ride-detection');
+        await syncRideDetection();
       }
     } else {
       this.fastSince = null;

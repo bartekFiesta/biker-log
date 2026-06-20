@@ -105,6 +105,15 @@ const es = {
     startRide: 'Iniciar ruta',
     stopRide: 'Finalizar ruta',
     rideDetection: 'Detección de rutas',
+    rideStatus: 'Registro de rutas',
+    rideStatusWaiting: 'En espera — arranca solo por encima de 25 km/h',
+    rideStatusRecording: 'Grabando tu ruta',
+    rideStatusPaused: 'Ruta en pausa',
+    rideStatusDetectionPaused: 'Pausado (coche/bus) — no inicia solo',
+    autoRideHint: 'Abre la app una vez; las rutas se registran solas en segundo plano. Pausa en coche o bus.',
+    pauseDetection: 'Pausar auto-deteción (coche/bus)',
+    resumeDetection: 'Reanudar auto-deteción',
+    manualStart: 'Inicio manual (opcional)',
   },
   settings: {
     motorcycle: 'Moto',
@@ -122,10 +131,10 @@ const es = {
     rideDetection: 'Detección de rutas',
     autoStartFg: 'Inicio automático (primer plano)',
     autoStartFgHint:
-      'Empieza a grabar cuando la velocidad supera 25 km/h durante 20 segundos con la app abierta.',
+      'Detecta rutas con la app abierta. Déjalo activado — usa pausa en el panel para coche/bus.',
     autoStartBg: 'Inicio automático (segundo plano)',
     autoStartBgHint:
-      'Misma detección con la app en segundo plano. Requiere permiso de ubicación.',
+      'Detecta rutas en segundo plano tras abrir la app una vez. Requiere Ubicación → Siempre en iPhone.',
     notifications: 'Notificaciones',
     serviceReminders: 'Recordatorios de servicio',
     everyKm: 'Cada (km)',

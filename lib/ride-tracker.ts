@@ -138,10 +138,34 @@ export class RideTracker {
   }
 
   private async resumeBackgroundRideDetection() {
-    const { getSettings } = await import('./db');
-    const { syncBackgroundRideDetection } = await import('./background-location');
-    const settings = await getSettings();
-    await syncBackgroundRideDetection(settings.background_auto_start);
+    const { syncRideDetection } = await import('./ride-detection');
+    await syncRideDetection();
+  }
+
+  private async stopActiveRideBackgroundTask() {
+    if (!isIos) return;
+    const hasStarted = await Location.hasStartedLocationUpdatesAsync(ACTIVE_RIDE_TASK).catch(
+      () => false
+    );
+    if (hasStarted) {
+      await Location.stopLocationUpdatesAsync(ACTIVE_RIDE_TASK);
+    }
+  }
+
+  private async startActiveRideBackgroundTask() {
+    if (!isIos) return;
+
+    const background = await Location.requestBackgroundPermissionsAsync();
+    if (background.status !== 'granted') return;
+
+    await this.stopActiveRideBackgroundTask();
+    await Location.startLocationUpdatesAsync(ACTIVE_RIDE_TASK, {
+      accuracy: Location.Accuracy.High,
+      distanceInterval: MIN_DISTANCE_M,
+      showsBackgroundLocationIndicator: true,
+      pausesUpdatesAutomatically: false,
+      activityType: Location.ActivityType.AutomotiveNavigation,
+    });
   }
 
   private stopPollTimer() {
@@ -175,6 +199,7 @@ export class RideTracker {
     this.stopPollTimer();
     this.subscription?.remove();
     this.subscription = null;
+    await this.stopActiveRideBackgroundTask();
     this.watching = false;
   }
 
@@ -215,6 +240,7 @@ export class RideTracker {
 
     this.watching = true;
     this.startPollTimer();
+    await this.startActiveRideBackgroundTask();
   }
 
   async processLocationFromTask(location: Location.LocationObject): Promise<void> {
@@ -284,6 +310,9 @@ export class RideTracker {
     const { autoRideDetector } = await import('./auto-ride-detector');
     autoRideDetector.stopMonitoring();
 
+    const { stopBackgroundRideDetection } = await import('./background-location');
+    await stopBackgroundRideDetection();
+
     const { createRide } = await import('./db');
     const ride = await createRide(odometerStart);
     this.rideId = ride.id;
@@ -325,8 +354,8 @@ export class RideTracker {
 
     await deleteRide(id);
 
-    const { autoRideDetector } = await import('./auto-ride-detector');
-    void autoRideDetector.sync();
+    const { syncRideDetection } = await import('./ride-detection');
+    await syncRideDetection();
   }
 
   async pause(): Promise<void> {
@@ -396,8 +425,8 @@ export class RideTracker {
     this.rideStartedAt = null;
     this.notify();
 
-    const { autoRideDetector } = await import('./auto-ride-detector');
-    void autoRideDetector.sync();
+    const { syncRideDetection } = await import('./ride-detection');
+    await syncRideDetection();
   }
 }
 

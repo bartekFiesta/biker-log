@@ -9,7 +9,7 @@ import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { getAppVersionLabel } from '@/lib/app-info';
 import { autoRideDetector } from '@/lib/auto-ride-detector';
-import { syncBackgroundRideDetection } from '@/lib/background-location';
+import { syncRideDetection } from '@/lib/ride-detection';
 import { normalizeCurrency } from '@/lib/currencies';
 import {
   getActiveBike,
@@ -139,7 +139,7 @@ export default function SettingsScreen() {
       });
     }
     await autoRideDetector.sync();
-    await syncBackgroundRideDetection(backgroundAutoStart);
+    await syncRideDetection();
     const [rules, records, odometer] = await Promise.all([
       getServiceReminderRules(),
       getServiceRecords(),

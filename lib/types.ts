@@ -32,6 +32,7 @@ export interface Settings {
   app_language: AppLanguage;
   auto_start_rides: boolean;
   background_auto_start: boolean;
+  ride_detection_paused: boolean;
   notifications_enabled: boolean;
   onboarding_complete: boolean;
   parked_lat: number | null;

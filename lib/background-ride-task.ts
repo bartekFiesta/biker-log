@@ -25,7 +25,7 @@ if (isNative) {
   }
 
   const settings = await getSettings();
-  if (!settings.background_auto_start) return;
+  if (settings.ride_detection_paused || !settings.background_auto_start) return;
 
   const speedKmh = location.coords.speed != null ? Math.max(0, location.coords.speed * 3.6) : 0;
 
@@ -35,6 +35,8 @@ if (isNative) {
       fastSince = null;
       const odometer = await getLatestOdometer();
       await rideTracker.start(odometer);
+      const { syncRideDetection } = await import('./ride-detection');
+      await syncRideDetection();
     }
   } else {
     fastSince = null;

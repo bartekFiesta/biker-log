@@ -9,6 +9,7 @@ import Colors from '@/constants/Colors';
 import { normalizeCurrency } from '@/lib/currencies';
 import { completeOnboarding } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
+import { requestRideLocationPermissions } from '@/lib/ride-detection';
 import { useI18n } from '@/lib/i18n/context';
 
 export default function OnboardingScreen() {
@@ -49,6 +50,7 @@ export default function OnboardingScreen() {
       odometerValue,
       consumptionValue
     );
+    await requestRideLocationPermissions();
     setSaving(false);
     refresh();
     router.replace('/(tabs)');

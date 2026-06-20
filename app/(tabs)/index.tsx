@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, View, Alert } from 'react-native';
 
 import PrimaryButton from '@/components/PrimaryButton';
-import { ReminderList, ToggleRow } from '@/components/ReminderCard';
+import { ReminderList } from '@/components/ReminderCard';
 import StatCard from '@/components/StatCard';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
@@ -17,11 +17,9 @@ import {
   getServiceRecords,
   getServiceReminderRules,
   getSettings,
-  updateSettings,
 } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
-import { autoRideDetector } from '@/lib/auto-ride-detector';
-import { syncBackgroundRideDetection } from '@/lib/background-location';
+import { setRideDetectionPaused } from '@/lib/ride-detection';
 import { computeFuelStatus } from '@/lib/fuel-calculations';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { useI18n } from '@/lib/i18n/context';
@@ -42,8 +40,7 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [activeRide, setActiveRide] = useState(false);
   const [activeRidePaused, setActiveRidePaused] = useState(false);
-  const [autoStartRides, setAutoStartRides] = useState(false);
-  const [backgroundAutoStart, setBackgroundAutoStart] = useState(false);
+  const [detectionPaused, setDetectionPaused] = useState(false);
   const [bikeName, setBikeName] = useState('');
   const [parkedAt, setParkedAt] = useState<string | null>(null);
   const [parkedCoords, setParkedCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -86,13 +83,14 @@ export default function DashboardScreen() {
     const lastService = services[0];
     const activeFromDb = await getActiveRide();
     if (activeFromDb && rideTracker.getRideId() == null) {
-      await rideTracker.restore({ startGps: false });
+      await rideTracker.restore({ startGps: true });
+    } else if (activeFromDb) {
+      await rideTracker.ensureTracking();
     }
     const activeId = rideTracker.getRideId() ?? activeFromDb?.id ?? null;
 
     setBikeName(bike.name);
-    setAutoStartRides(settings.auto_start_rides);
-    setBackgroundAutoStart(settings.background_auto_start);
+    setDetectionPaused(settings.ride_detection_paused);
     setParkedAt(settings.parked_at);
     setParkedCoords(
       settings.parked_lat != null && settings.parked_lng != null
@@ -201,21 +199,22 @@ export default function DashboardScreen() {
     ]);
   };
 
-  const handleAutoStartChange = (value: boolean) => {
+  const handleDetectionPauseToggle = () => {
     void (async () => {
-      setAutoStartRides(value);
-      await updateSettings({ auto_start_rides: value });
-      await autoRideDetector.sync();
+      const next = !detectionPaused;
+      setDetectionPaused(next);
+      await setRideDetectionPaused(next);
+      refresh();
     })();
   };
 
-  const handleBackgroundAutoStartChange = (value: boolean) => {
-    void (async () => {
-      setBackgroundAutoStart(value);
-      await updateSettings({ background_auto_start: value });
-      await syncBackgroundRideDetection(value);
-    })();
-  };
+  const rideStatusText = activeRide
+    ? activeRidePaused
+      ? t('dashboard.rideStatusPaused')
+      : t('dashboard.rideStatusRecording')
+    : detectionPaused
+      ? t('dashboard.rideStatusDetectionPaused')
+      : t('dashboard.rideStatusWaiting');
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -265,35 +264,34 @@ export default function DashboardScreen() {
         <Text style={styles.infoValue}>{stats.lastRefuel}</Text>
       </View>
 
-      <View style={styles.infoBox}>
-        <Text style={styles.infoLabel}>{t('dashboard.rideDetection')}</Text>
-        <ToggleRow
-          label={t('settings.autoStartFg')}
-          hint={t('settings.autoStartFgHint')}
-          value={autoStartRides}
-          onChange={handleAutoStartChange}
-        />
-        <ToggleRow
-          label={t('settings.autoStartBg')}
-          hint={t('settings.autoStartBgHint')}
-          value={backgroundAutoStart}
-          onChange={handleBackgroundAutoStartChange}
-        />
+      <View style={[styles.infoBox, styles.rideStatusBox]}>
+        <Text style={styles.infoLabel}>{t('dashboard.rideStatus')}</Text>
+        <Text style={styles.infoValue}>{rideStatusText}</Text>
+        <Text style={styles.infoHint}>{t('dashboard.autoRideHint')}</Text>
       </View>
 
-      <PrimaryButton
-        label={
-          activeRide
-            ? activeRidePaused
-              ? t('dashboard.returnPaused')
-              : t('dashboard.returnActive')
-            : t('dashboard.startRide')
-        }
-        onPress={() => router.push('/ride/active')}
-        disabled={loading}
-      />
+      {!activeRide ? (
+        <PrimaryButton
+          label={
+            detectionPaused
+              ? t('dashboard.resumeDetection')
+              : t('dashboard.pauseDetection')
+          }
+          onPress={handleDetectionPauseToggle}
+          variant={detectionPaused ? 'primary' : 'secondary'}
+          disabled={loading}
+        />
+      ) : null}
+
       {activeRide ? (
         <>
+          <PrimaryButton
+            label={
+              activeRidePaused ? t('dashboard.returnPaused') : t('dashboard.returnActive')
+            }
+            onPress={() => router.push('/ride/active')}
+            disabled={loading}
+          />
           <PrimaryButton
             label={t('dashboard.stopRide')}
             onPress={handleQuickStop}
@@ -308,6 +306,13 @@ export default function DashboardScreen() {
           />
         </>
       ) : null}
+
+      <PrimaryButton
+        label={t('dashboard.manualStart')}
+        onPress={() => router.push('/ride/active')}
+        variant="secondary"
+        disabled={loading || activeRide}
+      />
     </ScrollView>
   );
 }
@@ -355,5 +360,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.dark.muted,
     marginTop: 4,
+  },
+  rideStatusBox: {
+    borderColor: Colors.dark.tint,
   },
 });
