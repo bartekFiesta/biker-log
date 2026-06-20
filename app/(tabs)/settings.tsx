@@ -235,7 +235,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.sectionTitle}>{t('settings.motorcycle')}</Text>
       <PrimaryButton
         label={t('settings.manageBikes')}

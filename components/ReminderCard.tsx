@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
@@ -59,27 +59,20 @@ interface ToggleRowProps {
 }
 
 export function ToggleRow({ label, value, onChange, hint }: ToggleRowProps) {
-  const { t } = useI18n();
-
   return (
     <View style={styles.toggleBlock}>
-      <Text style={styles.toggleLabel}>{label}</Text>
-      {hint ? <Text style={styles.toggleHint}>{hint}</Text> : null}
-      <View style={styles.toggleButtons}>
-        <Pressable
-          style={[styles.toggleButton, value && styles.toggleButtonActive]}
-          onPress={() => onChange(true)}>
-          <Text style={[styles.toggleButtonText, value && styles.toggleButtonTextActive]}>
-            {t('common.on')}
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[styles.toggleButton, !value && styles.toggleButtonActive]}
-          onPress={() => onChange(false)}>
-          <Text style={[styles.toggleButtonText, !value && styles.toggleButtonTextActive]}>
-            {t('common.off')}
-          </Text>
-        </Pressable>
+      <View style={styles.toggleHeader}>
+        <View style={styles.toggleText}>
+          <Text style={styles.toggleLabel}>{label}</Text>
+          {hint ? <Text style={styles.toggleHint}>{hint}</Text> : null}
+        </View>
+        <Switch
+          value={value}
+          onValueChange={onChange}
+          trackColor={{ false: Colors.dark.border, true: Colors.dark.tint }}
+          thumbColor="#f5f5f5"
+          ios_backgroundColor={Colors.dark.border}
+        />
       </View>
     </View>
   );
@@ -117,6 +110,16 @@ const styles = StyleSheet.create({
   toggleBlock: {
     gap: 6,
   },
+  toggleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  toggleText: {
+    flex: 1,
+    gap: 4,
+  },
   toggleLabel: {
     fontSize: 14,
     color: Colors.dark.muted,
@@ -125,29 +128,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.dark.muted,
     lineHeight: 17,
-  },
-  toggleButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: Colors.dark.card,
-    borderWidth: 1,
-    borderColor: Colors.dark.border,
-    alignItems: 'center',
-  },
-  toggleButtonActive: {
-    backgroundColor: Colors.dark.tint,
-    borderColor: Colors.dark.tint,
-  },
-  toggleButtonText: {
-    color: Colors.dark.text,
-    fontWeight: '600',
-  },
-  toggleButtonTextActive: {
-    color: '#121212',
   },
 });

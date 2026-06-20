@@ -309,3 +309,38 @@ export function routeDistanceKm(points: { lat: number; lng: number }[]): number 
   }
   return total;
 }
+
+export interface RideFuelEstimate {
+  liters: number;
+  cost: number;
+  consumption_l_per_100km: number;
+  price_per_liter: number;
+}
+
+/** Estimated fuel used and cost for a completed ride. */
+export function computeRideFuelEstimate(
+  ride: Ride,
+  refuelings: Refueling[],
+  consumptionLPer100km: number | null | undefined
+): RideFuelEstimate | null {
+  if (ride.distance_gps_km <= 0 || consumptionLPer100km == null || consumptionLPer100km <= 0) {
+    return null;
+  }
+
+  const rideEndMs = ride.ended_at ? new Date(ride.ended_at).getTime() : Date.now();
+  const priceRefueling =
+    [...refuelings]
+      .filter((item) => new Date(item.date).getTime() <= rideEndMs && item.price_per_liter > 0)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] ??
+    refuelings.find((item) => item.price_per_liter > 0);
+
+  if (!priceRefueling) return null;
+
+  const liters = (ride.distance_gps_km * consumptionLPer100km) / 100;
+  return {
+    liters,
+    cost: liters * priceRefueling.price_per_liter,
+    consumption_l_per_100km: consumptionLPer100km,
+    price_per_liter: priceRefueling.price_per_liter,
+  };
+}

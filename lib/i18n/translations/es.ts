@@ -185,6 +185,7 @@ const es = {
     discardFailed: 'No se pudo descartar la ruta.',
     deleteRide: 'Eliminar ruta',
     deleteHint: 'Mantén pulsada una ruta para eliminarla.',
+    fuelCost: 'Combustible {{cost}} (est.)',
   },
   rideActive: {
     ready: 'Listo para empezar',
@@ -223,6 +224,8 @@ const es = {
     start: 'Inicio',
     duration: 'Duración',
     gpsDistance: 'Distancia GPS',
+    fuelUsed: 'Combustible (est.)',
+    fuelCost: 'Coste combustible (est.)',
     avgSpeed: 'Vel. media',
     maxSpeed: 'Vel. máxima',
     odometerStart: 'Odómetro inicio',

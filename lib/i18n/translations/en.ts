@@ -185,6 +185,7 @@ const en = {
     discardFailed: 'Could not discard ride.',
     deleteRide: 'Delete ride',
     deleteHint: 'Long press a ride to delete it.',
+    fuelCost: 'Fuel {{cost}} (est.)',
   },
   rideActive: {
     ready: 'Ready to start',
@@ -223,6 +224,8 @@ const en = {
     start: 'Start',
     duration: 'Duration',
     gpsDistance: 'GPS distance',
+    fuelUsed: 'Fuel used (est.)',
+    fuelCost: 'Fuel cost (est.)',
     avgSpeed: 'Avg. speed',
     maxSpeed: 'Max speed',
     odometerStart: 'Odometer start',

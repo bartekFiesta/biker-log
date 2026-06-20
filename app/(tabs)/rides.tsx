@@ -5,11 +5,12 @@ import { Alert, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
-import { deleteRide, getActiveRide, getRides, getSettings } from '@/lib/db';
+import { deleteRide, getActiveBike, getActiveRide, getLatestOdometer, getRefuelings, getRides, getSettings } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
-import { formatDateTime, formatDuration } from '@/lib/format';
+import { formatDateTime, formatDuration, formatCurrency } from '@/lib/format';
+import { computeFuelStatus, computeRideFuelEstimate } from '@/lib/fuel-calculations';
 import { useI18n } from '@/lib/i18n/context';
-import { formatDistance } from '@/lib/units';
+import { formatDistance, formatVolume } from '@/lib/units';
 import { rideTracker } from '@/lib/ride-tracker';
 import type { Ride } from '@/lib/types';
 
@@ -21,11 +22,33 @@ export default function RidesScreen() {
   const [activeRide, setActiveRide] = useState(false);
   const [activeRidePaused, setActiveRidePaused] = useState(false);
   const [distanceUnit, setDistanceUnit] = useState<'km' | 'mi'>('km');
+  const [volumeUnit, setVolumeUnit] = useState<'L' | 'gal'>('L');
+  const [currency, setCurrency] = useState('USD');
+  const [consumptionLPer100km, setConsumptionLPer100km] = useState<number | null>(null);
+  const [refuelings, setRefuelings] = useState<Awaited<ReturnType<typeof getRefuelings>>>([]);
 
   const load = useCallback(async () => {
-    const [data, settings] = await Promise.all([getRides(), getSettings()]);
+    const [data, settings, fuelRecords, bike, odometer] = await Promise.all([
+      getRides(),
+      getSettings(),
+      getRefuelings(),
+      getActiveBike(),
+      getLatestOdometer(),
+    ]);
+    const fuelStatus = computeFuelStatus(
+      bike.tank_capacity_l,
+      fuelRecords,
+      data,
+      odometer,
+      bike.default_consumption_l_per_100km,
+      bike.baseline_odometer_km
+    );
     setRides(data.filter((ride) => ride.ended_at != null));
     setDistanceUnit(settings.distance_unit);
+    setVolumeUnit(settings.volume_unit);
+    setCurrency(settings.currency);
+    setConsumptionLPer100km(fuelStatus.avg_consumption_l_per_100km);
+    setRefuelings(fuelRecords);
     const activeFromDb = await getActiveRide();
     if (activeFromDb && rideTracker.getRideId() == null) {
       await rideTracker.restore({ startGps: false });
@@ -135,7 +158,9 @@ export default function RidesScreen() {
             <Text style={styles.listHint}>{t('rides.deleteHint')}</Text>
           ) : null
         }
-        renderItem={({ item }) => (
+        renderItem={({ item }) => {
+          const fuel = computeRideFuelEstimate(item, refuelings, consumptionLPer100km);
+          return (
           <Pressable
             style={styles.card}
             onPress={() => router.push(`/ride/${item.id}`)}
@@ -147,6 +172,12 @@ export default function RidesScreen() {
               {formatDistance(item.distance_gps_km, distanceUnit, 1)} ·{' '}
               {formatDuration(item.started_at, item.ended_at)}
             </Text>
+            {fuel ? (
+              <Text style={styles.cardMeta}>
+                {formatVolume(fuel.liters, volumeUnit, 1)} ·{' '}
+                {t('rides.fuelCost', { cost: formatCurrency(fuel.cost, currency) })}
+              </Text>
+            ) : null}
             {item.odometer_end != null ? (
               <Text style={styles.cardMeta}>
                 {t('rides.odometer', {
@@ -155,7 +186,8 @@ export default function RidesScreen() {
               </Text>
             ) : null}
           </Pressable>
-        )}
+          );
+        }}
       />
     </View>
   );

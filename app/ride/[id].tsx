@@ -6,12 +6,13 @@ import MapRoute from '@/components/MapRoute';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
-import { deleteRide, getRide, getSettings } from '@/lib/db';
+import { deleteRide, getActiveBike, getLatestOdometer, getRefuelings, getRide, getRides, getSettings } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
 import { formatCurrency, formatDateTime, formatDuration, formatDurationMs } from '@/lib/format';
+import { computeFuelStatus, computeRideFuelEstimate } from '@/lib/fuel-calculations';
 import { useI18n } from '@/lib/i18n/context';
 import { computeRideSpeedStats } from '@/lib/ride-speed';
-import { formatDistance } from '@/lib/units';
+import { formatDistance, formatVolume } from '@/lib/units';
 import type { Ride } from '@/lib/types';
 
 export default function RideDetailScreen() {
@@ -22,15 +23,37 @@ export default function RideDetailScreen() {
   const [ride, setRide] = useState<Ride | null>(null);
   const [currency, setCurrency] = useState('USD');
   const [distanceUnit, setDistanceUnit] = useState<'km' | 'mi'>('km');
+  const [volumeUnit, setVolumeUnit] = useState<'L' | 'gal'>('L');
+  const [fuelEstimate, setFuelEstimate] = useState<ReturnType<typeof computeRideFuelEstimate>>(null);
 
   useEffect(() => {
     void (async () => {
       const rideId = Number(id);
       if (!Number.isFinite(rideId)) return;
-      const [rideData, settings] = await Promise.all([getRide(rideId), getSettings()]);
+      const [rideData, settings, refuelings, bike, odometer] = await Promise.all([
+        getRide(rideId),
+        getSettings(),
+        getRefuelings(),
+        getActiveBike(),
+        getLatestOdometer(),
+      ]);
+      const fuelStatus = computeFuelStatus(
+        bike.tank_capacity_l,
+        refuelings,
+        rideData ? await getRides() : [],
+        odometer,
+        bike.default_consumption_l_per_100km,
+        bike.baseline_odometer_km
+      );
       setRide(rideData);
       setCurrency(settings.currency);
       setDistanceUnit(settings.distance_unit);
+      setVolumeUnit(settings.volume_unit);
+      if (rideData) {
+        setFuelEstimate(
+          computeRideFuelEstimate(rideData, refuelings, fuelStatus.avg_consumption_l_per_100km)
+        );
+      }
     })();
   }, [id]);
 
@@ -73,6 +96,18 @@ export default function RideDetailScreen() {
           label={t('rideDetails.gpsDistance')}
           value={formatDistance(ride.distance_gps_km, distanceUnit, 2)}
         />
+        {fuelEstimate ? (
+          <>
+            <Stat
+              label={t('rideDetails.fuelUsed')}
+              value={formatVolume(fuelEstimate.liters, volumeUnit, 2)}
+            />
+            <Stat
+              label={t('rideDetails.fuelCost')}
+              value={formatCurrency(fuelEstimate.cost, currency)}
+            />
+          </>
+        ) : null}
         {speedStats ? (
           <>
             <Stat
