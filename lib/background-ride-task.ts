@@ -1,56 +1,46 @@
+import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 
-import { getLatestOdometer, getSettings, getActiveRide } from './db';
+import { getActiveRide, getLatestOdometer, getSettings } from './db';
 import { isNative } from './platform';
+import { autoStartTracker, resetAutoStartTracker } from './ride-auto-start';
 import { rideTracker } from './ride-tracker';
-import { RIDE_SPEED_THRESHOLD_KMH } from './ride-speed';
 
 export const BACKGROUND_RIDE_TASK = 'background-ride-detection';
 
-const CONFIRM_MS = 20000;
-let fastSince: number | null = null;
-
 export function resetBackgroundRideDetectionTimer(): void {
-  fastSince = null;
+  resetAutoStartTracker();
 }
 
 if (isNative) {
   TaskManager.defineTask(BACKGROUND_RIDE_TASK, async ({ data, error }) => {
-  if (error) return;
-  if (!data) return;
+    if (error) return;
+    if (!data) return;
 
-  const locations = (data as { locations?: { coords: { speed: number | null } }[] }).locations;
-  const location = locations?.[0];
-  if (!location) return;
+    const locations = (data as { locations?: Location.LocationObject[] }).locations;
+    const location = locations?.[0];
+    if (!location) return;
 
-  if (rideTracker.getRideId() != null) {
-    fastSince = null;
-    return;
-  }
-
-  const activeRide = await getActiveRide();
-  if (activeRide) {
-    await rideTracker.restore({ startGps: true });
-    fastSince = null;
-    return;
-  }
-
-  const settings = await getSettings();
-  if (settings.ride_detection_paused || !settings.background_auto_start) return;
-
-  const speedKmh = location.coords.speed != null ? Math.max(0, location.coords.speed * 3.6) : 0;
-
-  if (speedKmh >= RIDE_SPEED_THRESHOLD_KMH) {
-    if (fastSince == null) fastSince = Date.now();
-    else if (Date.now() - fastSince >= CONFIRM_MS) {
-      fastSince = null;
-      const odometer = await getLatestOdometer();
-      await rideTracker.start(odometer);
-      const { syncRideDetection } = await import('./ride-detection');
-      await syncRideDetection();
+    if (rideTracker.getRideId() != null) {
+      resetAutoStartTracker();
+      return;
     }
-  } else {
-    fastSince = null;
-  }
+
+    const activeRide = await getActiveRide();
+    if (activeRide) {
+      await rideTracker.restore({ startGps: true });
+      resetAutoStartTracker();
+      return;
+    }
+
+    const settings = await getSettings();
+    if (settings.ride_detection_paused || !settings.background_auto_start) return;
+
+    if (!autoStartTracker.update(location)) return;
+
+    const odometer = await getLatestOdometer();
+    await rideTracker.start(odometer);
+    const { syncRideDetection } = await import('./ride-detection');
+    await syncRideDetection();
   });
 }

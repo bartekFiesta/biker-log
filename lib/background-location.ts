@@ -17,17 +17,19 @@ export async function syncBackgroundRideDetection(enabled: boolean): Promise<voi
     const { status } = await Location.requestBackgroundPermissionsAsync();
     if (status !== 'granted') return;
 
-    if (!hasStarted) {
-      await Location.startLocationUpdatesAsync(BACKGROUND_RIDE_TASK, {
-        accuracy: Location.Accuracy.Balanced,
-        distanceInterval: 25,
-        showsBackgroundLocationIndicator: true,
-        foregroundService: {
-          notificationTitle: 'Biker Log',
-          notificationBody: 'Ride detection active',
-        },
-      });
+    if (hasStarted) {
+      await Location.stopLocationUpdatesAsync(BACKGROUND_RIDE_TASK);
     }
+
+    await Location.startLocationUpdatesAsync(BACKGROUND_RIDE_TASK, {
+      accuracy: Location.Accuracy.Balanced,
+      distanceInterval: 15,
+      showsBackgroundLocationIndicator: true,
+      foregroundService: {
+        notificationTitle: 'Biker Log',
+        notificationBody: 'Ride detection active',
+      },
+    });
     return;
   }
 

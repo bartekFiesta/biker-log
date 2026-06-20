@@ -212,9 +212,22 @@ export class RideTracker {
 
   private async resumeDetectionAfterRide() {
     const { syncRideDetection } = await import('./ride-detection');
-    await syncRideDetection();
+    const { resetAutoStartTracker } = await import('./ride-auto-start');
     const { resetBackgroundRideDetectionTimer } = await import('./background-ride-task');
-    resetBackgroundRideDetectionTimer();
+
+    const restart = async () => {
+      resetAutoStartTracker();
+      resetBackgroundRideDetectionTimer();
+      await syncRideDetection();
+    };
+
+    await restart();
+    setTimeout(() => {
+      void restart();
+    }, 5000);
+    setTimeout(() => {
+      void restart();
+    }, 15000);
   }
 
   private async startWatching(force = false) {

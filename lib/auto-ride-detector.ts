@@ -1,17 +1,15 @@
 import * as Location from 'expo-location';
 
+import { autoStartTracker, resetAutoStartTracker } from './ride-auto-start';
 import { getActiveRide, getLatestOdometer, getSettings } from './db';
 import { rideTracker } from './ride-tracker';
-import { RIDE_SPEED_THRESHOLD_KMH } from './ride-speed';
 
-const CONFIRM_SECONDS = 20;
 const CHECK_INTERVAL_MS = 5000;
 
 type AutoStartListener = () => void;
 
 export class AutoRideDetector {
   private subscription: Location.LocationSubscription | null = null;
-  private fastSince: number | null = null;
   private listeners = new Set<AutoStartListener>();
   private running = false;
 
@@ -27,19 +25,21 @@ export class AutoRideDetector {
   }
 
   async startMonitoring(): Promise<void> {
-    if (this.running) return;
+    if (this.running && this.subscription != null) return;
+
+    this.stop();
 
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') return;
 
     this.running = true;
-    this.fastSince = null;
+    resetAutoStartTracker();
 
     this.subscription = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.Balanced,
         timeInterval: CHECK_INTERVAL_MS,
-        distanceInterval: 20,
+        distanceInterval: 15,
       },
       (location) => {
         void this.handleLocation(location);
@@ -68,39 +68,30 @@ export class AutoRideDetector {
     this.subscription?.remove();
     this.subscription = null;
     this.running = false;
-    this.fastSince = null;
+    resetAutoStartTracker();
   }
 
   private async handleLocation(location: Location.LocationObject) {
     if (rideTracker.getRideId() != null) {
-      this.fastSince = null;
+      resetAutoStartTracker();
       return;
     }
 
     const activeRide = await getActiveRide();
     if (activeRide) {
       await rideTracker.restore({ startGps: true });
-      this.fastSince = null;
+      resetAutoStartTracker();
       return;
     }
 
-    const speedKmh = location.coords.speed != null ? Math.max(0, location.coords.speed * 3.6) : 0;
+    if (!autoStartTracker.update(location)) return;
 
-    if (speedKmh >= RIDE_SPEED_THRESHOLD_KMH) {
-      if (this.fastSince == null) {
-        this.fastSince = Date.now();
-      } else if (Date.now() - this.fastSince >= CONFIRM_SECONDS * 1000) {
-        this.fastSince = null;
-        this.stop();
-        const odometer = await getLatestOdometer();
-        await rideTracker.start(odometer);
-        this.notifyStarted();
-        const { syncRideDetection } = await import('./ride-detection');
-        await syncRideDetection();
-      }
-    } else {
-      this.fastSince = null;
-    }
+    this.stop();
+    const odometer = await getLatestOdometer();
+    await rideTracker.start(odometer);
+    this.notifyStarted();
+    const { syncRideDetection } = await import('./ride-detection');
+    await syncRideDetection();
   }
 }
 
