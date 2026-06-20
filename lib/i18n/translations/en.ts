@@ -104,6 +104,7 @@ const en = {
     returnActive: 'Return to active ride',
     startRide: 'Start ride',
     stopRide: 'Stop ride',
+    rideDetection: 'Ride detection',
   },
   settings: {
     motorcycle: 'Motorcycle',
@@ -166,6 +167,12 @@ const en = {
     deleteMessage: 'Are you sure you want to delete this ride?',
     stopTitle: 'Stop ride?',
     stopMessage: 'Save this ride to your history with the GPS distance recorded so far.',
+    discardRide: 'Discard ride',
+    discardTitle: 'Discard ride?',
+    discardMessage: 'Delete this recording without saving it to history.',
+    discardFailed: 'Could not discard ride.',
+    deleteRide: 'Delete ride',
+    deleteHint: 'Long press a ride to delete it.',
   },
   rideActive: {
     ready: 'Ready to start',

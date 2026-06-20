@@ -54,8 +54,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
       }
       await getDatabase();
       try {
-        await rideTracker.restore();
-        await rideTracker.ensureTracking();
+        await rideTracker.restore({ startGps: false });
       } catch {
         // Keep app usable even if ride restore fails.
       }

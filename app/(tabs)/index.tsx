@@ -4,20 +4,24 @@ import { useCallback, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, View, Alert } from 'react-native';
 
 import PrimaryButton from '@/components/PrimaryButton';
-import { ReminderList } from '@/components/ReminderCard';
+import { ReminderList, ToggleRow } from '@/components/ReminderCard';
 import StatCard from '@/components/StatCard';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import {
   getActiveBike,
+  getActiveRide,
   getLatestOdometer,
   getRefuelings,
   getRides,
   getServiceRecords,
   getServiceReminderRules,
   getSettings,
+  updateSettings,
 } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
+import { autoRideDetector } from '@/lib/auto-ride-detector';
+import { syncBackgroundRideDetection } from '@/lib/background-location';
 import { computeFuelStatus } from '@/lib/fuel-calculations';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { useI18n } from '@/lib/i18n/context';
@@ -38,6 +42,8 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [activeRide, setActiveRide] = useState(false);
   const [activeRidePaused, setActiveRidePaused] = useState(false);
+  const [autoStartRides, setAutoStartRides] = useState(false);
+  const [backgroundAutoStart, setBackgroundAutoStart] = useState(false);
   const [bikeName, setBikeName] = useState('');
   const [parkedAt, setParkedAt] = useState<string | null>(null);
   const [parkedCoords, setParkedCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -78,9 +84,15 @@ export default function DashboardScreen() {
 
     const lastRefuel = refuelings[0];
     const lastService = services[0];
-    const activeId = rideTracker.getRideId() ?? (await rideTracker.ensureRestored());
+    const activeFromDb = await getActiveRide();
+    if (activeFromDb && rideTracker.getRideId() == null) {
+      await rideTracker.restore({ startGps: false });
+    }
+    const activeId = rideTracker.getRideId() ?? activeFromDb?.id ?? null;
 
     setBikeName(bike.name);
+    setAutoStartRides(settings.auto_start_rides);
+    setBackgroundAutoStart(settings.background_auto_start);
     setParkedAt(settings.parked_at);
     setParkedCoords(
       settings.parked_lat != null && settings.parked_lng != null
@@ -166,6 +178,45 @@ export default function DashboardScreen() {
     ]);
   };
 
+  const handleDiscard = () => {
+    Alert.alert(t('rides.discardTitle'), t('rides.discardMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            try {
+              await rideTracker.discardActiveRide();
+              refresh();
+            } catch (error) {
+              Alert.alert(
+                t('common.error'),
+                error instanceof Error ? error.message : t('rides.discardFailed')
+              );
+            }
+          })();
+        },
+      },
+    ]);
+  };
+
+  const handleAutoStartChange = (value: boolean) => {
+    void (async () => {
+      setAutoStartRides(value);
+      await updateSettings({ auto_start_rides: value });
+      await autoRideDetector.sync();
+    })();
+  };
+
+  const handleBackgroundAutoStartChange = (value: boolean) => {
+    void (async () => {
+      setBackgroundAutoStart(value);
+      await updateSettings({ background_auto_start: value });
+      await syncBackgroundRideDetection(value);
+    })();
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>{t('dashboard.title')}</Text>
@@ -214,6 +265,22 @@ export default function DashboardScreen() {
         <Text style={styles.infoValue}>{stats.lastRefuel}</Text>
       </View>
 
+      <View style={styles.infoBox}>
+        <Text style={styles.infoLabel}>{t('dashboard.rideDetection')}</Text>
+        <ToggleRow
+          label={t('settings.autoStartFg')}
+          hint={t('settings.autoStartFgHint')}
+          value={autoStartRides}
+          onChange={handleAutoStartChange}
+        />
+        <ToggleRow
+          label={t('settings.autoStartBg')}
+          hint={t('settings.autoStartBgHint')}
+          value={backgroundAutoStart}
+          onChange={handleBackgroundAutoStartChange}
+        />
+      </View>
+
       <PrimaryButton
         label={
           activeRide
@@ -226,12 +293,20 @@ export default function DashboardScreen() {
         disabled={loading}
       />
       {activeRide ? (
-        <PrimaryButton
-          label={t('dashboard.stopRide')}
-          onPress={handleQuickStop}
-          variant="danger"
-          disabled={loading}
-        />
+        <>
+          <PrimaryButton
+            label={t('dashboard.stopRide')}
+            onPress={handleQuickStop}
+            variant="danger"
+            disabled={loading}
+          />
+          <PrimaryButton
+            label={t('rides.discardRide')}
+            onPress={handleDiscard}
+            variant="secondary"
+            disabled={loading}
+          />
+        </>
       ) : null}
     </ScrollView>
   );

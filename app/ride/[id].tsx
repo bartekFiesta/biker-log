@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, Alert } from 'react-native';
 
 import MapRoute from '@/components/MapRoute';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
-import { getRide, getSettings } from '@/lib/db';
+import { deleteRide, getRide, getSettings } from '@/lib/db';
+import { useDatabase } from '@/lib/database-context';
 import { formatCurrency, formatDateTime, formatDuration, formatDurationMs } from '@/lib/format';
 import { useI18n } from '@/lib/i18n/context';
 import { computeRideSpeedStats } from '@/lib/ride-speed';
@@ -16,6 +17,7 @@ import type { Ride } from '@/lib/types';
 export default function RideDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { refresh } = useDatabase();
   const { t } = useI18n();
   const [ride, setRide] = useState<Ride | null>(null);
   const [currency, setCurrency] = useState('USD');
@@ -41,6 +43,23 @@ export default function RideDetailScreen() {
   }
 
   const speedStats = computeRideSpeedStats(ride.route_points);
+
+  const handleDelete = () => {
+    Alert.alert(t('rides.deleteTitle'), t('rides.deleteMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            await deleteRide(ride.id);
+            refresh();
+            router.back();
+          })();
+        },
+      },
+    ]);
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -94,6 +113,11 @@ export default function RideDetailScreen() {
         label={t('rideDetails.edit')}
         onPress={() => router.push(`/ride/edit/${ride.id}`)}
         variant="secondary"
+      />
+      <PrimaryButton
+        label={t('rides.deleteRide')}
+        onPress={handleDelete}
+        variant="danger"
       />
     </ScrollView>
   );

@@ -5,7 +5,7 @@ import { Alert, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import PrimaryButton from '@/components/PrimaryButton';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
-import { deleteRide, getRides, getSettings } from '@/lib/db';
+import { deleteRide, getActiveRide, getRides, getSettings } from '@/lib/db';
 import { useDatabase } from '@/lib/database-context';
 import { formatDateTime, formatDuration } from '@/lib/format';
 import { useI18n } from '@/lib/i18n/context';
@@ -26,8 +26,11 @@ export default function RidesScreen() {
     const [data, settings] = await Promise.all([getRides(), getSettings()]);
     setRides(data.filter((ride) => ride.ended_at != null));
     setDistanceUnit(settings.distance_unit);
-    const activeId = rideTracker.getRideId() ?? (await rideTracker.ensureRestored());
-    setActiveRide(activeId != null);
+    const activeFromDb = await getActiveRide();
+    if (activeFromDb && rideTracker.getRideId() == null) {
+      await rideTracker.restore({ startGps: false });
+    }
+    setActiveRide(rideTracker.getRideId() != null || activeFromDb != null);
     setActiveRidePaused(rideTracker.isPaused());
   }, [refreshKey]);
 
@@ -74,6 +77,29 @@ export default function RidesScreen() {
     ]);
   };
 
+  const handleDiscard = () => {
+    Alert.alert(t('rides.discardTitle'), t('rides.discardMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            try {
+              await rideTracker.discardActiveRide();
+              refresh();
+            } catch (error) {
+              Alert.alert(
+                t('common.error'),
+                error instanceof Error ? error.message : t('rides.discardFailed')
+              );
+            }
+          })();
+        },
+      },
+    ]);
+  };
+
   return (
     <View style={styles.container}>
       {activeRide ? (
@@ -87,6 +113,11 @@ export default function RidesScreen() {
             onPress={handleQuickStop}
             variant="danger"
           />
+          <PrimaryButton
+            label={t('rides.discardRide')}
+            onPress={handleDiscard}
+            variant="secondary"
+          />
         </View>
       ) : (
         <View style={styles.header}>
@@ -99,6 +130,11 @@ export default function RidesScreen() {
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
         ListEmptyComponent={<Text style={styles.empty}>{t('rides.empty')}</Text>}
+        ListHeaderComponent={
+          rides.length > 0 ? (
+            <Text style={styles.listHint}>{t('rides.deleteHint')}</Text>
+          ) : null
+        }
         renderItem={({ item }) => (
           <Pressable
             style={styles.card}
@@ -147,6 +183,11 @@ const styles = StyleSheet.create({
   list: {
     padding: 16,
     gap: 12,
+  },
+  listHint: {
+    fontSize: 12,
+    color: Colors.dark.muted,
+    marginBottom: 8,
   },
   empty: {
     textAlign: 'center',

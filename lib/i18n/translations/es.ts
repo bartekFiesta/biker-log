@@ -104,6 +104,7 @@ const es = {
     returnActive: 'Volver a ruta activa',
     startRide: 'Iniciar ruta',
     stopRide: 'Finalizar ruta',
+    rideDetection: 'Detección de rutas',
   },
   settings: {
     motorcycle: 'Moto',
@@ -168,6 +169,12 @@ const es = {
     deleteMessage: '¿Seguro que quieres eliminar esta ruta?',
     stopTitle: '¿Finalizar ruta?',
     stopMessage: 'Guarda esta ruta en el historial con la distancia GPS registrada hasta ahora.',
+    discardRide: 'Descartar ruta',
+    discardTitle: '¿Descartar ruta?',
+    discardMessage: 'Elimina esta grabación sin guardarla en el historial.',
+    discardFailed: 'No se pudo descartar la ruta.',
+    deleteRide: 'Eliminar ruta',
+    deleteHint: 'Mantén pulsada una ruta para eliminarla.',
   },
   rideActive: {
     ready: 'Listo para empezar',

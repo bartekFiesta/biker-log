@@ -2,7 +2,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { Platform } from 'react-native';
 
-import { finishRide, getActiveRide, updateRidePauseState, updateRideRoute } from './db';
+import { deleteRide, finishRide, getActiveRide, updateRidePauseState, updateRideRoute } from './db';
 import { routeDistanceKm } from './fuel-calculations';
 import { isNative } from './platform';
 import { speedKmhFromMps } from './ride-speed';
@@ -12,7 +12,7 @@ export const ACTIVE_RIDE_TASK = 'active-ride-tracking';
 
 const MIN_DISTANCE_M = 5;
 const MIN_INTERVAL_MS = 3000;
-const POLL_INTERVAL_MS = 8000;
+const POLL_INTERVAL_MS = 5000;
 const isIos = Platform.OS === 'ios';
 
 export interface RideTrackerSnapshot {
@@ -82,7 +82,7 @@ export class RideTracker {
     return this.restore();
   }
 
-  async restore(): Promise<number | null> {
+  async restore(options?: { startGps?: boolean }): Promise<number | null> {
     const active = await getActiveRide();
     if (!active) return null;
 
@@ -93,7 +93,7 @@ export class RideTracker {
     this.pauseStartedAt = null;
     this.rideStartedAt = new Date(active.started_at).getTime();
 
-    if (!this.paused) {
+    if (!this.paused && options?.startGps !== false) {
       await this.startWatching();
       await this.seedCurrentLocation();
     }
@@ -137,15 +137,6 @@ export class RideTracker {
     return routeDistanceKm(this.points);
   }
 
-  private async stopActiveRideBackgroundTask() {
-    const hasStarted = await Location.hasStartedLocationUpdatesAsync(ACTIVE_RIDE_TASK).catch(
-      () => false
-    );
-    if (hasStarted) {
-      await Location.stopLocationUpdatesAsync(ACTIVE_RIDE_TASK);
-    }
-  }
-
   private async resumeBackgroundRideDetection() {
     const { getSettings } = await import('./db');
     const { syncBackgroundRideDetection } = await import('./background-location');
@@ -180,91 +171,47 @@ export class RideTracker {
     }
   }
 
-  private async stopWatching() {
-    if (!this.watching) return;
-
+  private async teardownWatching() {
     this.stopPollTimer();
     this.subscription?.remove();
     this.subscription = null;
-
-    if (isIos) {
-      await this.stopActiveRideBackgroundTask();
-      await this.resumeBackgroundRideDetection();
-    }
-
     this.watching = false;
   }
 
-  private async startAndroidWatching() {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      throw new Error('Location permission denied');
-    }
+  private async stopWatching() {
+    if (!this.watching) return;
 
-    this.subscription = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: MIN_INTERVAL_MS,
-        distanceInterval: MIN_DISTANCE_M,
-      },
-      (location) => {
-        void this.handleLocation(location);
-      }
-    );
-  }
-
-  private async startIosWatching() {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      throw new Error('Location permission denied');
-    }
-
-    // iOS allows only one background location task — stop ride detection first.
-    const { stopBackgroundRideDetection } = await import('./background-location');
-    await stopBackgroundRideDetection();
-
-    this.subscription = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: MIN_INTERVAL_MS,
-        distanceInterval: 1,
-      },
-      (location) => {
-        void this.handleLocation(location);
-      }
-    );
-
-    const background = await Location.requestBackgroundPermissionsAsync();
-    if (background.status === 'granted') {
-      await this.stopActiveRideBackgroundTask();
-      await Location.startLocationUpdatesAsync(ACTIVE_RIDE_TASK, {
-        accuracy: Location.Accuracy.High,
-        distanceInterval: MIN_DISTANCE_M,
-        showsBackgroundLocationIndicator: true,
-        pausesUpdatesAutomatically: false,
-        activityType: Location.ActivityType.AutomotiveNavigation,
-      });
-    }
+    await this.teardownWatching();
+    await this.resumeBackgroundRideDetection();
   }
 
   private async startWatching(force = false) {
     if (this.watching && !force) return;
 
     if (force) {
-      this.stopPollTimer();
-      this.subscription?.remove();
-      this.subscription = null;
-      if (isIos) {
-        await this.stopActiveRideBackgroundTask();
-      }
-      this.watching = false;
+      await this.teardownWatching();
+    }
+
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      throw new Error('Location permission denied');
     }
 
     if (isIos) {
-      await this.startIosWatching();
-    } else {
-      await this.startAndroidWatching();
+      const { stopBackgroundRideDetection } = await import('./background-location');
+      await stopBackgroundRideDetection();
     }
+
+    this.subscription = await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: MIN_INTERVAL_MS,
+        distanceInterval: isIos ? 1 : MIN_DISTANCE_M,
+      },
+      (location) => {
+        void this.handleLocation(location);
+      }
+    );
 
     this.watching = true;
     this.startPollTimer();
@@ -314,7 +261,7 @@ export class RideTracker {
   private async seedCurrentLocation() {
     try {
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
+        accuracy: Location.Accuracy.BestForNavigation,
       });
       await this.handleLocation(location);
     } catch {
@@ -327,7 +274,7 @@ export class RideTracker {
 
     const existing = await getActiveRide();
     if (existing) {
-      const restored = await this.restore();
+      const restored = await this.restore({ startGps: true });
       if (restored != null) {
         await this.ensureTracking();
         return restored;
@@ -352,6 +299,36 @@ export class RideTracker {
     return ride.id;
   }
 
+  async discardActiveRide(): Promise<void> {
+    let id = this.rideId;
+    if (id == null) {
+      const active = await getActiveRide();
+      id = active?.id ?? null;
+      if (active) {
+        this.rideId = active.id;
+        this.points = active.route_points;
+      }
+    }
+    if (id == null) return;
+
+    await this.teardownWatching();
+    await this.resumeBackgroundRideDetection();
+
+    this.rideId = null;
+    this.points = [];
+    this.paused = false;
+    this.pausedDurationMs = 0;
+    this.pauseStartedAt = null;
+    this.rideStartedAt = null;
+    this.lastRecordedAt = 0;
+    this.notify();
+
+    await deleteRide(id);
+
+    const { autoRideDetector } = await import('./auto-ride-detector');
+    void autoRideDetector.sync();
+  }
+
   async pause(): Promise<void> {
     if (this.rideId == null || this.paused) return;
 
@@ -371,6 +348,7 @@ export class RideTracker {
     this.pauseStartedAt = null;
     this.paused = false;
     await this.startWatching();
+    await this.seedCurrentLocation();
     await this.persistPauseState();
     this.notify();
   }

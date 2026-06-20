@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, TextInput, View } from 'react-native';
 
 import MapRoute from '@/components/MapRoute';
@@ -39,6 +39,12 @@ export default function ActiveRideScreen() {
         ? t('rideActive.paused')
         : t('rideActive.ready');
 
+  useFocusEffect(
+    useCallback(() => {
+      void rideTracker.ensureTracking();
+    }, [])
+  );
+
   useEffect(() => {
     void (async () => {
       const [latest, settings, active] = await Promise.all([
@@ -48,10 +54,8 @@ export default function ActiveRideScreen() {
       ]);
 
       if (active && rideTracker.getRideId() == null) {
-        await rideTracker.restore();
-      }
-
-      if (rideTracker.getRideId() != null) {
+        await rideTracker.restore({ startGps: true });
+      } else if (rideTracker.getRideId() != null) {
         await rideTracker.ensureTracking();
       }
 
@@ -175,6 +179,30 @@ export default function ActiveRideScreen() {
     }
   };
 
+  const handleDiscard = () => {
+    Alert.alert(t('rides.discardTitle'), t('rides.discardMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            try {
+              await rideTracker.discardActiveRide();
+              refresh();
+              router.back();
+            } catch (error) {
+              Alert.alert(
+                t('common.error'),
+                error instanceof Error ? error.message : t('rides.discardFailed')
+              );
+            }
+          })();
+        },
+      },
+    ]);
+  };
+
   const isActive = state === 'recording' || state === 'paused';
 
   return (
@@ -268,6 +296,12 @@ export default function ActiveRideScreen() {
             label={loading ? t('rideActive.stopping') : t('rideActive.stop')}
             onPress={handleStop}
             variant="danger"
+            disabled={loading}
+          />
+          <PrimaryButton
+            label={t('rides.discardRide')}
+            onPress={handleDiscard}
+            variant="secondary"
             disabled={loading}
           />
         </View>
