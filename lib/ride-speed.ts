@@ -6,6 +6,9 @@ export const RIDE_SPEED_THRESHOLD_KMH = 25;
 /** Auto-stop ride after this long below threshold speed. */
 export const AUTO_STOP_IDLE_MS = 2 * 60 * 1000;
 
+/** Ignore auto-stop until the ride has been active this long (avoids GPS glitches). */
+export const MIN_RIDE_BEFORE_AUTO_STOP_MS = 60 * 1000;
+
 export function computeRideSpeedStats(points: RoutePoint[]): RideSpeedStats | null {
   const speeds = points
     .map((point) => point.speed_kmh)

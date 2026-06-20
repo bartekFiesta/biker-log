@@ -1,6 +1,6 @@
 import * as TaskManager from 'expo-task-manager';
 
-import { getLatestOdometer, getSettings } from './db';
+import { getLatestOdometer, getSettings, getActiveRide } from './db';
 import { isNative } from './platform';
 import { rideTracker } from './ride-tracker';
 import { RIDE_SPEED_THRESHOLD_KMH } from './ride-speed';
@@ -9,6 +9,10 @@ export const BACKGROUND_RIDE_TASK = 'background-ride-detection';
 
 const CONFIRM_MS = 20000;
 let fastSince: number | null = null;
+
+export function resetBackgroundRideDetectionTimer(): void {
+  fastSince = null;
+}
 
 if (isNative) {
   TaskManager.defineTask(BACKGROUND_RIDE_TASK, async ({ data, error }) => {
@@ -20,6 +24,13 @@ if (isNative) {
   if (!location) return;
 
   if (rideTracker.getRideId() != null) {
+    fastSince = null;
+    return;
+  }
+
+  const activeRide = await getActiveRide();
+  if (activeRide) {
+    await rideTracker.restore({ startGps: true });
     fastSince = null;
     return;
   }

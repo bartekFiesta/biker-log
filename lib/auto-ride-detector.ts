@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 
-import { getLatestOdometer, getSettings } from './db';
+import { getActiveRide, getLatestOdometer, getSettings } from './db';
 import { rideTracker } from './ride-tracker';
 import { RIDE_SPEED_THRESHOLD_KMH } from './ride-speed';
 
@@ -73,6 +73,13 @@ export class AutoRideDetector {
 
   private async handleLocation(location: Location.LocationObject) {
     if (rideTracker.getRideId() != null) {
+      this.fastSince = null;
+      return;
+    }
+
+    const activeRide = await getActiveRide();
+    if (activeRide) {
+      await rideTracker.restore({ startGps: true });
       this.fastSince = null;
       return;
     }

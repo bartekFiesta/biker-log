@@ -7,6 +7,7 @@ import { routeDistanceKm } from './fuel-calculations';
 import { isNative } from './platform';
 import {
   AUTO_STOP_IDLE_MS,
+  MIN_RIDE_BEFORE_AUTO_STOP_MS,
   RIDE_SPEED_THRESHOLD_KMH,
   speedKmhFromMps,
 } from './ride-speed';
@@ -143,11 +144,6 @@ export class RideTracker {
     return routeDistanceKm(this.points);
   }
 
-  private async resumeBackgroundRideDetection() {
-    const { syncRideDetection } = await import('./ride-detection');
-    await syncRideDetection();
-  }
-
   private async stopActiveRideBackgroundTask() {
     if (!isIos) return;
     const hasStarted = await Location.hasStartedLocationUpdatesAsync(ACTIVE_RIDE_TASK).catch(
@@ -211,9 +207,14 @@ export class RideTracker {
 
   private async stopWatching() {
     if (!this.watching) return;
-
     await this.teardownWatching();
-    await this.resumeBackgroundRideDetection();
+  }
+
+  private async resumeDetectionAfterRide() {
+    const { syncRideDetection } = await import('./ride-detection');
+    await syncRideDetection();
+    const { resetBackgroundRideDetectionTimer } = await import('./background-ride-task');
+    resetBackgroundRideDetectionTimer();
   }
 
   private async startWatching(force = false) {
@@ -250,6 +251,10 @@ export class RideTracker {
   }
 
   async processLocationFromTask(location: Location.LocationObject): Promise<void> {
+    if (!(await this.ensureActiveRideLoaded())) return;
+    if (!this.watching && !this.paused) {
+      await this.startWatching(true);
+    }
     await this.handleLocation(location);
   }
 
@@ -260,6 +265,12 @@ export class RideTracker {
     }
   }
 
+  private async ensureActiveRideLoaded(): Promise<boolean> {
+    if (this.rideId != null) return true;
+    const restored = await this.restore({ startGps: false });
+    return restored != null;
+  }
+
   private resetAutoStopTimer() {
     this.slowSince = null;
   }
@@ -267,16 +278,29 @@ export class RideTracker {
   private async checkAutoStop(rawSpeedMps: number | null | undefined) {
     if (this.rideId == null || this.paused || this.autoStopInProgress) return;
 
-    const speedKmh = rawSpeedMps != null ? Math.max(0, rawSpeedMps * 3.6) : 0;
+    if (
+      this.rideStartedAt != null &&
+      Date.now() - this.rideStartedAt < MIN_RIDE_BEFORE_AUTO_STOP_MS
+    ) {
+      return;
+    }
+
+    // Unknown speed should not trigger auto-stop (common GPS glitch while moving).
+    if (rawSpeedMps == null) return;
+
+    const speedKmh = Math.max(0, rawSpeedMps * 3.6);
 
     if (speedKmh < RIDE_SPEED_THRESHOLD_KMH) {
       if (this.slowSince == null) {
         this.slowSince = Date.now();
       } else if (Date.now() - this.slowSince >= AUTO_STOP_IDLE_MS) {
         this.autoStopInProgress = true;
-        this.resetAutoStopTimer();
         try {
           await this.stopQuick();
+          this.resetAutoStopTimer();
+        } catch {
+          // Retry after another idle window if save failed.
+          this.slowSince = Date.now();
         } finally {
           this.autoStopInProgress = false;
         }
@@ -292,7 +316,8 @@ export class RideTracker {
   }
 
   private async handleLocation(location: Location.LocationObject) {
-    if (this.rideId == null || this.paused) return;
+    if (!(await this.ensureActiveRideLoaded())) return;
+    if (this.paused) return;
 
     const now = Date.now();
     const point: RoutePoint = {
@@ -375,7 +400,6 @@ export class RideTracker {
     if (id == null) return;
 
     await this.teardownWatching();
-    await this.resumeBackgroundRideDetection();
 
     this.rideId = null;
     this.points = [];
@@ -389,8 +413,7 @@ export class RideTracker {
 
     await deleteRide(id);
 
-    const { syncRideDetection } = await import('./ride-detection');
-    await syncRideDetection();
+    await this.resumeDetectionAfterRide();
   }
 
   async pause(): Promise<void> {
@@ -454,16 +477,17 @@ export class RideTracker {
 
     const distance = routeDistanceKm(this.points);
     const pausedDurationMs = this.pausedDurationMs;
-    await finishRide(this.rideId, this.points, distance, odometerEnd, pausedDurationMs, label, tollsCost);
+    const rideId = this.rideId;
+    await finishRide(rideId, this.points, distance, odometerEnd, pausedDurationMs, label, tollsCost);
 
     this.rideId = null;
     this.points = [];
     this.pausedDurationMs = 0;
     this.rideStartedAt = null;
+    this.resetAutoStopTimer();
     this.notify();
 
-    const { syncRideDetection } = await import('./ride-detection');
-    await syncRideDetection();
+    await this.resumeDetectionAfterRide();
   }
 }
 
