@@ -6,7 +6,7 @@ import { haversineKm } from './fuel-calculations';
 export const AUTO_START_SPEED_THRESHOLD_KMH = 15;
 
 /** How long movement must continue before a new ride starts. */
-export const AUTO_START_CONFIRM_MS = 12 * 1000;
+export const AUTO_START_CONFIRM_MS = 10 * 1000;
 
 /** When GPS has no speed, this much movement between fixes counts as riding. */
 export const AUTO_START_MOVE_M = 50;
