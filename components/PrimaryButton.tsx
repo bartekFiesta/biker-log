@@ -8,6 +8,7 @@ interface PrimaryButtonProps {
   onPress: () => void;
   variant?: 'primary' | 'danger' | 'secondary';
   disabled?: boolean;
+  emphasized?: boolean;
 }
 
 export default function PrimaryButton({
@@ -15,6 +16,7 @@ export default function PrimaryButton({
   onPress,
   variant = 'primary',
   disabled = false,
+  emphasized = false,
 }: PrimaryButtonProps) {
   return (
     <Pressable
@@ -22,6 +24,7 @@ export default function PrimaryButton({
         styles.button,
         variant === 'danger' && styles.danger,
         variant === 'secondary' && styles.secondary,
+        emphasized && styles.emphasized,
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed,
       ]}
@@ -54,8 +57,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.dark.border,
   },
+  emphasized: {
+    borderColor: Colors.dark.tint,
+    backgroundColor: '#2A1F18',
+  },
   disabled: {
-    opacity: 0.5,
+    opacity: 0.65,
   },
   pressed: {
     opacity: 0.85,

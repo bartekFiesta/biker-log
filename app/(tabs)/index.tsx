@@ -37,7 +37,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { refreshKey, refresh } = useDatabase();
   const { t } = useI18n();
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [activeRide, setActiveRide] = useState(false);
   const [activeRidePaused, setActiveRidePaused] = useState(false);
   const [detectionPaused, setDetectionPaused] = useState(false);
@@ -57,7 +57,6 @@ export default function DashboardScreen() {
   });
 
   const load = useCallback(async () => {
-    setLoading(true);
     const [settings, bike, refuelings, rides, services, rules] = await Promise.all([
       getSettings(),
       getActiveBike(),
@@ -137,7 +136,7 @@ export default function DashboardScreen() {
         fuelStatus.fuel_remaining_l != null &&
         fuelStatus.fuel_remaining_l <= bike.reserve_threshold_l,
     });
-    setLoading(false);
+    setInitialLoading(false);
   }, [refreshKey, t]);
 
   useFocusEffect(
@@ -147,8 +146,10 @@ export default function DashboardScreen() {
   );
 
   useEffect(() => {
-    return rideTracker.subscribe(() => {
-      if (rideTracker.getRideId() == null) refresh();
+    return rideTracker.subscribe((snapshot) => {
+      setActiveRide(snapshot.state !== 'idle');
+      setActiveRidePaused(snapshot.state === 'paused');
+      if (snapshot.state === 'idle') refresh();
     });
   }, [refresh]);
 
@@ -210,7 +211,6 @@ export default function DashboardScreen() {
       const next = !detectionPaused;
       setDetectionPaused(next);
       await setRideDetectionPaused(next);
-      refresh();
     })();
   };
 
@@ -284,8 +284,8 @@ export default function DashboardScreen() {
               : t('dashboard.pauseDetection')
           }
           onPress={handleDetectionPauseToggle}
-          variant={detectionPaused ? 'primary' : 'secondary'}
-          disabled={loading}
+          variant="secondary"
+          emphasized={detectionPaused}
         />
       ) : null}
 
@@ -296,19 +296,16 @@ export default function DashboardScreen() {
               activeRidePaused ? t('dashboard.returnPaused') : t('dashboard.returnActive')
             }
             onPress={() => router.push('/ride/active')}
-            disabled={loading}
           />
           <PrimaryButton
             label={t('dashboard.stopRide')}
             onPress={handleQuickStop}
             variant="danger"
-            disabled={loading}
           />
           <PrimaryButton
             label={t('rides.discardRide')}
             onPress={handleDiscard}
             variant="secondary"
-            disabled={loading}
           />
         </>
       ) : null}
@@ -317,7 +314,7 @@ export default function DashboardScreen() {
         label={t('dashboard.manualStart')}
         onPress={() => router.push('/ride/active')}
         variant="secondary"
-        disabled={loading || activeRide}
+        disabled={initialLoading || activeRide}
       />
     </ScrollView>
   );
