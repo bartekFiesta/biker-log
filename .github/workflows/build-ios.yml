@@ -60,16 +60,20 @@ jobs:
         env:
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
+          set -euo pipefail
           cd ios
           WORKSPACE=$(ls -d *.xcworkspace | head -1)
           IPA_NAME="BikerLog-ios-build-${BUILD_NUMBER}.ipa"
+          ARCHIVE_PATH="$RUNNER_TEMP/BikerLog.xcarchive"
+          STAGING_DIR="$RUNNER_TEMP/ipa-staging"
+          IPA_PATH="$RUNNER_TEMP/$IPA_NAME"
           
           xcodebuild \
             -workspace "$WORKSPACE" \
             -scheme "BikerLog" \
             -configuration Release \
             -sdk iphoneos \
-            -archivePath $RUNNER_TEMP/BikerLog.xcarchive \
+            -archivePath "$ARCHIVE_PATH" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -78,19 +82,52 @@ jobs:
             DEVELOPMENT_TEAM="" \
             archive
 
-          # Extract .app and package as unsigned .ipa
-          APP_PATH=$(find $RUNNER_TEMP/BikerLog.xcarchive -name "*.app" | head -1)
-          mkdir -p $RUNNER_TEMP/ipa/Payload
-          cp -r "$APP_PATH" $RUNNER_TEMP/ipa/Payload/
-          cd $RUNNER_TEMP/ipa
-          zip -r $RUNNER_TEMP/$IPA_NAME Payload
-          echo "IPA_NAME=$IPA_NAME" >> $GITHUB_ENV
+          APP_PATH=$(find "$ARCHIVE_PATH/Products/Applications" -name "*.app" -maxdepth 1 | head -1)
+          if [ -z "$APP_PATH" ] || [ ! -d "$APP_PATH" ]; then
+            echo "Could not find .app in archive"
+            find "$ARCHIVE_PATH" -name "*.app"
+            exit 1
+          fi
+
+          # Ad-hoc sign so AltStore receives a valid app bundle it can re-sign.
+          /usr/bin/codesign --force --sign - --deep "$APP_PATH"
+
+          rm -rf "$STAGING_DIR"
+          mkdir -p "$STAGING_DIR/Payload"
+          /bin/cp -R "$APP_PATH" "$STAGING_DIR/Payload/"
+          cd "$STAGING_DIR"
+          /usr/bin/ditto -c -k --sequesterRsrc --keepParent Payload "$IPA_PATH"
+
+          echo "IPA_NAME=$IPA_NAME" >> "$GITHUB_ENV"
+          echo "Built $IPA_PATH ($(du -h "$IPA_PATH" | cut -f1))"
+
+      - name: Validate IPA
+        run: |
+          set -euo pipefail
+          IPA_PATH="$RUNNER_TEMP/${{ env.IPA_NAME }}"
+          /usr/bin/unzip -t "$IPA_PATH"
+          /usr/bin/unzip -l "$IPA_PATH" | grep -q "Payload/.*\.app/Info.plist"
+          APP_DIR=$(/usr/bin/unzip -l "$IPA_PATH" | awk '/Payload\/.*\.app\/Info.plist/ { sub(/\/Info.plist$/, "", $4); print $4; exit }')
+          /usr/bin/unzip -p "$IPA_PATH" "$APP_DIR/Info.plist" > "$RUNNER_TEMP/Info.plist"
+          EXEC=$(/usr/bin/plutil -extract CFBundleExecutable raw "$RUNNER_TEMP/Info.plist")
+          /usr/bin/unzip -p "$IPA_PATH" "$APP_DIR/$EXEC" > "$RUNNER_TEMP/BikerLog.bin"
+          /usr/bin/file "$RUNNER_TEMP/BikerLog.bin" | grep -q "arm64"
+          echo "IPA validation passed"
 
       - name: Publish IPA to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ios-build-${{ github.run_number }}
           name: BikerLog iOS build ${{ github.run_number }}
+          body: |
+            Install via AltServer on Windows (Install .IPA…).
+
+            If you see **"The data couldn't be read because it isn't in the correct format"**, the IPA is usually fine — AltStore failed to talk to Apple (sign-in / re-sign). Try:
+            - iTunes + iCloud from apple.com (not Microsoft Store)
+            - Sign in to iTunes on PC, then install again
+            - Same Wi‑Fi for PC and iPhone, USB connected
+            - Switch network or use cellular on iPhone once
+            - Download the `.ipa` on PC (not Safari HTML page); file must be ~14 MB
           files: ${{ runner.temp }}/${{ env.IPA_NAME }}
           prerelease: true
           make_latest: false
