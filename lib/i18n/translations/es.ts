@@ -149,6 +149,7 @@ const es = {
     exporting: 'Exportando...',
     importing: 'Importando...',
     saved: 'Ajustes guardados.',
+    saveFailed: 'No se pudo guardar este ajuste.',
     tankInvalid: 'Introduce una capacidad de depósito válida.',
     reserveInvalid: 'Introduce un umbral de reserva válido.',
     consumptionInvalid: 'Introduce un consumo medio válido (L/100 km).',

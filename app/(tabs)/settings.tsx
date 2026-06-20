@@ -73,13 +73,59 @@ export default function SettingsScreen() {
     setBackgroundAutoStart(settings.background_auto_start);
     setNotificationsEnabled(settings.notifications_enabled);
     setReminderRules(rules);
-  }, [refreshKey]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       void load();
     }, [load])
   );
+
+  const persistToggleSettings = async (
+    patch: Partial<{
+      auto_start_rides: boolean;
+      background_auto_start: boolean;
+      notifications_enabled: boolean;
+    }>
+  ) => {
+    await updateSettings(patch);
+    if ('auto_start_rides' in patch || 'background_auto_start' in patch) {
+      await autoRideDetector.sync();
+      await syncRideDetection();
+    }
+    if ('notifications_enabled' in patch) {
+      const [rules, records, odometer] = await Promise.all([
+        getServiceReminderRules(),
+        getServiceRecords(),
+        getLatestOdometer(),
+      ]);
+      await refreshServiceNotifications(rules, records, odometer);
+    }
+  };
+
+  const handleAutoStartRidesChange = (value: boolean) => {
+    setAutoStartRides(value);
+    void persistToggleSettings({ auto_start_rides: value }).catch(() => {
+      void load();
+      Alert.alert(t('common.error'), t('settings.saveFailed'));
+    });
+  };
+
+  const handleBackgroundAutoStartChange = (value: boolean) => {
+    setBackgroundAutoStart(value);
+    void persistToggleSettings({ background_auto_start: value }).catch(() => {
+      void load();
+      Alert.alert(t('common.error'), t('settings.saveFailed'));
+    });
+  };
+
+  const handleNotificationsChange = (value: boolean) => {
+    setNotificationsEnabled(value);
+    void persistToggleSettings({ notifications_enabled: value }).catch(() => {
+      void load();
+      Alert.alert(t('common.error'), t('settings.saveFailed'));
+    });
+  };
 
   const updateRule = (type: ReminderServiceType, patch: Partial<ServiceReminderRule>) => {
     setReminderRules((current) =>
@@ -256,13 +302,13 @@ export default function SettingsScreen() {
         label={t('settings.autoStartFg')}
         hint={t('settings.autoStartFgHint')}
         value={autoStartRides}
-        onChange={setAutoStartRides}
+        onChange={handleAutoStartRidesChange}
       />
       <ToggleRow
         label={t('settings.autoStartBg')}
         hint={t('settings.autoStartBgHint')}
         value={backgroundAutoStart}
-        onChange={setBackgroundAutoStart}
+        onChange={handleBackgroundAutoStartChange}
       />
 
       <Text style={styles.sectionTitle}>{t('settings.notifications')}</Text>
@@ -270,7 +316,7 @@ export default function SettingsScreen() {
         label={t('settings.serviceReminders')}
         hint={t('settings.notificationsHint')}
         value={notificationsEnabled}
-        onChange={setNotificationsEnabled}
+        onChange={handleNotificationsChange}
       />
 
       <Text style={styles.sectionTitle}>{t('settings.serviceReminders')}</Text>

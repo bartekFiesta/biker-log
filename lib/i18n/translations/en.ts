@@ -149,6 +149,7 @@ const en = {
     exporting: 'Exporting...',
     importing: 'Importing...',
     saved: 'Settings updated.',
+    saveFailed: 'Could not save this setting.',
     tankInvalid: 'Enter a valid tank capacity.',
     reserveInvalid: 'Enter a valid reserve threshold.',
     consumptionInvalid: 'Enter a valid average consumption (L/100 km).',
