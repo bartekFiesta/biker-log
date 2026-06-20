@@ -110,7 +110,7 @@ const en = {
     rideStatusRecording: 'Recording your ride',
     rideStatusPaused: 'Ride paused',
     rideStatusDetectionPaused: 'Paused (car/bus) — will not auto-start',
-    autoRideHint: 'Open the app once; rides log automatically in the background. Pause when in a car or bus.',
+    autoRideHint: 'Open the app once; rides log automatically. Auto-stops 2 min after speed drops below 25 km/h. Pause when in a car or bus.',
     pauseDetection: 'Pause auto-detection (car/bus)',
     resumeDetection: 'Resume auto-detection',
     manualStart: 'Manual start (optional)',

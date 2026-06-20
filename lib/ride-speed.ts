@@ -1,5 +1,11 @@
 import type { RoutePoint, RideSpeedStats } from './types';
 
+/** Speed threshold shared by auto-start and auto-stop (km/h). */
+export const RIDE_SPEED_THRESHOLD_KMH = 25;
+
+/** Auto-stop ride after this long below threshold speed. */
+export const AUTO_STOP_IDLE_MS = 2 * 60 * 1000;
+
 export function computeRideSpeedStats(points: RoutePoint[]): RideSpeedStats | null {
   const speeds = points
     .map((point) => point.speed_kmh)

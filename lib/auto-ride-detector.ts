@@ -2,8 +2,8 @@ import * as Location from 'expo-location';
 
 import { getLatestOdometer, getSettings } from './db';
 import { rideTracker } from './ride-tracker';
+import { RIDE_SPEED_THRESHOLD_KMH } from './ride-speed';
 
-const MIN_SPEED_KMH = 25;
 const CONFIRM_SECONDS = 20;
 const CHECK_INTERVAL_MS = 5000;
 
@@ -79,7 +79,7 @@ export class AutoRideDetector {
 
     const speedKmh = location.coords.speed != null ? Math.max(0, location.coords.speed * 3.6) : 0;
 
-    if (speedKmh >= MIN_SPEED_KMH) {
+    if (speedKmh >= RIDE_SPEED_THRESHOLD_KMH) {
       if (this.fastSince == null) {
         this.fastSince = Date.now();
       } else if (Date.now() - this.fastSince >= CONFIRM_SECONDS * 1000) {

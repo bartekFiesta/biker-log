@@ -110,7 +110,7 @@ const es = {
     rideStatusRecording: 'Grabando tu ruta',
     rideStatusPaused: 'Ruta en pausa',
     rideStatusDetectionPaused: 'Pausado (coche/bus) — no inicia solo',
-    autoRideHint: 'Abre la app una vez; las rutas se registran solas en segundo plano. Pausa en coche o bus.',
+    autoRideHint: 'Abre la app una vez; las rutas se registran solas. Para sola tras 2 min por debajo de 25 km/h. Pausa en coche o bus.',
     pauseDetection: 'Pausar auto-deteción (coche/bus)',
     resumeDetection: 'Reanudar auto-deteción',
     manualStart: 'Inicio manual (opcional)',

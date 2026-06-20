@@ -5,7 +5,11 @@ import { Platform } from 'react-native';
 import { deleteRide, finishRide, getActiveRide, updateRidePauseState, updateRideRoute } from './db';
 import { routeDistanceKm } from './fuel-calculations';
 import { isNative } from './platform';
-import { speedKmhFromMps } from './ride-speed';
+import {
+  AUTO_STOP_IDLE_MS,
+  RIDE_SPEED_THRESHOLD_KMH,
+  speedKmhFromMps,
+} from './ride-speed';
 import type { RideRecordingState, RoutePoint } from './types';
 
 export const ACTIVE_RIDE_TASK = 'active-ride-tracking';
@@ -34,6 +38,8 @@ export class RideTracker {
   private pauseStartedAt: number | null = null;
   private rideStartedAt: number | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private slowSince: number | null = null;
+  private autoStopInProgress = false;
   private listeners = new Set<(snapshot: RideTrackerSnapshot) => void>();
 
   subscribe(listener: (snapshot: RideTrackerSnapshot) => void): () => void {
@@ -254,6 +260,32 @@ export class RideTracker {
     }
   }
 
+  private resetAutoStopTimer() {
+    this.slowSince = null;
+  }
+
+  private async checkAutoStop(rawSpeedMps: number | null | undefined) {
+    if (this.rideId == null || this.paused || this.autoStopInProgress) return;
+
+    const speedKmh = rawSpeedMps != null ? Math.max(0, rawSpeedMps * 3.6) : 0;
+
+    if (speedKmh < RIDE_SPEED_THRESHOLD_KMH) {
+      if (this.slowSince == null) {
+        this.slowSince = Date.now();
+      } else if (Date.now() - this.slowSince >= AUTO_STOP_IDLE_MS) {
+        this.autoStopInProgress = true;
+        this.resetAutoStopTimer();
+        try {
+          await this.stopQuick();
+        } finally {
+          this.autoStopInProgress = false;
+        }
+      }
+    } else {
+      this.resetAutoStopTimer();
+    }
+  }
+
   private async persistPauseState() {
     if (this.rideId == null) return;
     await updateRidePauseState(this.rideId, this.paused, this.getTotalPausedDurationMs());
@@ -282,6 +314,7 @@ export class RideTracker {
     this.notify();
 
     await updateRideRoute(this.rideId, this.points, routeDistanceKm(this.points));
+    void this.checkAutoStop(location.coords.speed);
   }
 
   private async seedCurrentLocation() {
@@ -322,6 +355,7 @@ export class RideTracker {
     this.pausedDurationMs = 0;
     this.pauseStartedAt = null;
     this.rideStartedAt = Date.now();
+    this.resetAutoStopTimer();
     await this.startWatching();
     await this.seedCurrentLocation();
     this.notify();
@@ -350,6 +384,7 @@ export class RideTracker {
     this.pauseStartedAt = null;
     this.rideStartedAt = null;
     this.lastRecordedAt = 0;
+    this.resetAutoStopTimer();
     this.notify();
 
     await deleteRide(id);
@@ -364,6 +399,7 @@ export class RideTracker {
     await this.stopWatching();
     this.paused = true;
     this.pauseStartedAt = Date.now();
+    this.resetAutoStopTimer();
     await this.persistPauseState();
     this.notify();
   }
@@ -376,6 +412,7 @@ export class RideTracker {
     }
     this.pauseStartedAt = null;
     this.paused = false;
+    this.resetAutoStopTimer();
     await this.startWatching();
     await this.seedCurrentLocation();
     await this.persistPauseState();

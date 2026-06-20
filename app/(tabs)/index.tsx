@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, View, Alert } from 'react-native';
 
 import PrimaryButton from '@/components/PrimaryButton';
@@ -145,6 +145,12 @@ export default function DashboardScreen() {
       void load();
     }, [load])
   );
+
+  useEffect(() => {
+    return rideTracker.subscribe(() => {
+      if (rideTracker.getRideId() == null) refresh();
+    });
+  }, [refresh]);
 
   const openParkedLocation = () => {
     if (!parkedCoords) return;

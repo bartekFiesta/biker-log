@@ -3,10 +3,10 @@ import * as TaskManager from 'expo-task-manager';
 import { getLatestOdometer, getSettings } from './db';
 import { isNative } from './platform';
 import { rideTracker } from './ride-tracker';
+import { RIDE_SPEED_THRESHOLD_KMH } from './ride-speed';
 
 export const BACKGROUND_RIDE_TASK = 'background-ride-detection';
 
-const MIN_SPEED_KMH = 25;
 const CONFIRM_MS = 20000;
 let fastSince: number | null = null;
 
@@ -29,7 +29,7 @@ if (isNative) {
 
   const speedKmh = location.coords.speed != null ? Math.max(0, location.coords.speed * 3.6) : 0;
 
-  if (speedKmh >= MIN_SPEED_KMH) {
+  if (speedKmh >= RIDE_SPEED_THRESHOLD_KMH) {
     if (fastSince == null) fastSince = Date.now();
     else if (Date.now() - fastSince >= CONFIRM_MS) {
       fastSince = null;
