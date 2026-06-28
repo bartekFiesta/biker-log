@@ -1,10 +1,13 @@
 import type { RoutePoint, RideSpeedStats } from './types';
 
-/** Speed threshold shared by auto-start and auto-stop (km/h). */
+/** Speed threshold for auto-start (km/h). */
 export const RIDE_SPEED_THRESHOLD_KMH = 15;
 
-/** Auto-stop ride after this long below threshold speed. */
-export const AUTO_STOP_IDLE_MS = 2 * 60 * 1000;
+/** Below this speed counts as parked for auto-stop (km/h). */
+export const RIDE_STOP_SPEED_KMH = 8;
+
+/** Auto-stop ride after this long below stop speed. */
+export const AUTO_STOP_IDLE_MS = 5 * 60 * 1000;
 
 /** Ignore auto-stop until the ride has been active this long (avoids GPS glitches). */
 export const MIN_RIDE_BEFORE_AUTO_STOP_MS = 60 * 1000;

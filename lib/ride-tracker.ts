@@ -8,7 +8,7 @@ import { isNative } from './platform';
 import {
   AUTO_STOP_IDLE_MS,
   MIN_RIDE_BEFORE_AUTO_STOP_MS,
-  RIDE_SPEED_THRESHOLD_KMH,
+  RIDE_STOP_SPEED_KMH,
   speedKmhFromMps,
 } from './ride-speed';
 import type { RideRecordingState, RoutePoint } from './types';
@@ -303,7 +303,7 @@ export class RideTracker {
 
     const speedKmh = Math.max(0, rawSpeedMps * 3.6);
 
-    if (speedKmh < RIDE_SPEED_THRESHOLD_KMH) {
+    if (speedKmh < RIDE_STOP_SPEED_KMH) {
       if (this.slowSince == null) {
         this.slowSince = Date.now();
       } else if (Date.now() - this.slowSince >= AUTO_STOP_IDLE_MS) {
@@ -366,7 +366,7 @@ export class RideTracker {
     }
   }
 
-  async start(odometerStart: number | null): Promise<number> {
+  async start(odometerStart: number | null, seedPoints: RoutePoint[] = []): Promise<number> {
     if (this.rideId != null) return this.rideId;
 
     const existing = await getActiveRide();
@@ -387,15 +387,19 @@ export class RideTracker {
     const { createRide } = await import('./db');
     const ride = await createRide(odometerStart);
     this.rideId = ride.id;
-    this.points = [];
-    this.lastRecordedAt = 0;
+    this.points = [...seedPoints];
+    this.lastRecordedAt = seedPoints.length > 0 ? seedPoints[seedPoints.length - 1].ts : 0;
     this.paused = false;
     this.pausedDurationMs = 0;
     this.pauseStartedAt = null;
-    this.rideStartedAt = Date.now();
+    this.rideStartedAt = seedPoints.length > 0 ? seedPoints[0].ts : Date.now();
     this.resetAutoStopTimer();
     await this.startWatching();
-    await this.seedCurrentLocation();
+    if (seedPoints.length > 0) {
+      await updateRideRoute(this.rideId, this.points, routeDistanceKm(this.points));
+    } else {
+      await this.seedCurrentLocation();
+    }
     this.notify();
     return ride.id;
   }

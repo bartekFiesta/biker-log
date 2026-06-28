@@ -3,7 +3,7 @@ import * as TaskManager from 'expo-task-manager';
 
 import { getActiveRide, getLatestOdometer, getSettings } from './db';
 import { isNative } from './platform';
-import { autoStartTracker, resetAutoStartTracker } from './ride-auto-start';
+import { autoStartTracker, consumeAutoStartTrail, resetAutoStartTracker } from './ride-auto-start';
 import { rideTracker } from './ride-tracker';
 
 export const BACKGROUND_RIDE_TASK = 'background-ride-detection';
@@ -39,7 +39,8 @@ if (isNative) {
     if (!autoStartTracker.update(location)) return;
 
     const odometer = await getLatestOdometer();
-    await rideTracker.start(odometer);
+    const trail = consumeAutoStartTrail();
+    await rideTracker.start(odometer, trail);
     const { syncRideDetection } = await import('./ride-detection');
     await syncRideDetection();
   });

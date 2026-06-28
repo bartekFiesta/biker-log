@@ -1,10 +1,8 @@
 import * as Location from 'expo-location';
 
-import { autoStartTracker, resetAutoStartTracker } from './ride-auto-start';
+import { autoStartTracker, consumeAutoStartTrail, resetAutoStartTracker } from './ride-auto-start';
 import { getActiveRide, getLatestOdometer, getSettings } from './db';
 import { rideTracker } from './ride-tracker';
-
-const CHECK_INTERVAL_MS = 5000;
 
 type AutoStartListener = () => void;
 
@@ -38,8 +36,8 @@ export class AutoRideDetector {
     this.subscription = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.Balanced,
-        timeInterval: CHECK_INTERVAL_MS,
-        distanceInterval: 15,
+        timeInterval: 3000,
+        distanceInterval: 10,
       },
       (location) => {
         void this.handleLocation(location);
@@ -88,7 +86,8 @@ export class AutoRideDetector {
 
     this.stop();
     const odometer = await getLatestOdometer();
-    await rideTracker.start(odometer);
+    const trail = consumeAutoStartTrail();
+    await rideTracker.start(odometer, trail);
     this.notifyStarted();
     const { syncRideDetection } = await import('./ride-detection');
     await syncRideDetection();

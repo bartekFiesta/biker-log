@@ -23,7 +23,7 @@ export async function syncBackgroundRideDetection(enabled: boolean): Promise<voi
 
     await Location.startLocationUpdatesAsync(BACKGROUND_RIDE_TASK, {
       accuracy: Location.Accuracy.Balanced,
-      distanceInterval: 15,
+      distanceInterval: 10,
       showsBackgroundLocationIndicator: true,
       foregroundService: {
         notificationTitle: 'Biker Log',
