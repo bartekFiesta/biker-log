@@ -2,6 +2,10 @@ import * as Location from 'expo-location';
 
 import { autoStartTracker, consumeAutoStartTrail, resetAutoStartTracker } from './ride-auto-start';
 import { getActiveRide, getLatestOdometer, getSettings } from './db';
+import {
+  passengerTransportDetector,
+  resetPassengerTransportDetector,
+} from './passenger-transport-detector';
 import { rideTracker } from './ride-tracker';
 
 type AutoStartListener = () => void;
@@ -32,6 +36,7 @@ export class AutoRideDetector {
 
     this.running = true;
     resetAutoStartTracker();
+    resetPassengerTransportDetector();
 
     this.subscription = await Location.watchPositionAsync(
       {
@@ -67,18 +72,32 @@ export class AutoRideDetector {
     this.subscription = null;
     this.running = false;
     resetAutoStartTracker();
+    resetPassengerTransportDetector();
   }
 
   private async handleLocation(location: Location.LocationObject) {
     if (rideTracker.getRideId() != null) {
       resetAutoStartTracker();
+      resetPassengerTransportDetector();
       return;
     }
+
+    const settings = await getSettings();
+    if (settings.ride_detection_paused) {
+      resetPassengerTransportDetector();
+      return;
+    }
+
+    passengerTransportDetector.update(location, 'detection');
 
     const activeRide = await getActiveRide();
     if (activeRide) {
       await rideTracker.restore({ startGps: true });
       resetAutoStartTracker();
+      return;
+    }
+
+    if (passengerTransportDetector.shouldBlockAutoStart()) {
       return;
     }
 

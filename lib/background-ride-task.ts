@@ -4,12 +4,17 @@ import * as TaskManager from 'expo-task-manager';
 import { getActiveRide, getLatestOdometer, getSettings } from './db';
 import { isNative } from './platform';
 import { autoStartTracker, consumeAutoStartTrail, resetAutoStartTracker } from './ride-auto-start';
+import {
+  passengerTransportDetector,
+  resetPassengerTransportDetector,
+} from './passenger-transport-detector';
 import { rideTracker } from './ride-tracker';
 
 export const BACKGROUND_RIDE_TASK = 'background-ride-detection';
 
 export function resetBackgroundRideDetectionTimer(): void {
   resetAutoStartTracker();
+  resetPassengerTransportDetector();
 }
 
 if (isNative) {
@@ -23,8 +28,17 @@ if (isNative) {
 
     if (rideTracker.getRideId() != null) {
       resetAutoStartTracker();
+      resetPassengerTransportDetector();
       return;
     }
+
+    const settings = await getSettings();
+    if (settings.ride_detection_paused || !settings.background_auto_start) {
+      resetPassengerTransportDetector();
+      return;
+    }
+
+    passengerTransportDetector.update(location, 'detection');
 
     const activeRide = await getActiveRide();
     if (activeRide) {
@@ -33,8 +47,7 @@ if (isNative) {
       return;
     }
 
-    const settings = await getSettings();
-    if (settings.ride_detection_paused || !settings.background_auto_start) return;
+    if (passengerTransportDetector.shouldBlockAutoStart()) return;
 
     if (!autoStartTracker.update(location)) return;
 

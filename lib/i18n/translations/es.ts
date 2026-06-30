@@ -60,6 +60,16 @@ const es = {
     dueSoonTitle: 'Servicio próximo',
     rideStartedTitle: 'Ruta iniciada',
     rideStartedBody: 'La detección automática empezó a grabar tu ruta.',
+    rideEndedTitle: 'Ruta guardada',
+    rideEndedBody: 'Distancia: {{distance}}',
+    passengerTransportTitle: '¿Coche o autobús?',
+    passengerTransportBody:
+      'El movimiento parece un vehículo, no tu moto aparcada. Pausa la detección en el panel.',
+    passengerTransportBodyRecording:
+      'El movimiento parece un vehículo. Detén la ruta o pausa la detección si dejaste la moto.',
+    walkingWhileRecordingTitle: '¿Sigues grabando?',
+    walkingWhileRecordingBody:
+      'Movimiento lento durante varios minutos — detén la ruta si vas a pie (p. ej. tras un bus).',
   },
   onboarding: {
     heading: 'Bienvenido a Biker Log',
@@ -113,6 +123,10 @@ const es = {
     autoRideHint: 'Abre la app una vez; las rutas se registran solas. Para sola tras 5 min parado (menos de 8 km/h). Pausa en coche o bus.',
     pauseDetection: 'Pausar auto-deteción (coche/bus)',
     resumeDetection: 'Reanudar auto-deteción',
+    passengerTransportBanner:
+      'Posible viaje en coche/bus — pausa la detección si la moto está aparcada',
+    walkingTransportBanner:
+      'Caminata lenta detectada — detén la ruta si no estás en la moto',
     manualStart: 'Inicio manual (opcional)',
   },
   settings: {
@@ -137,6 +151,12 @@ const es = {
       'Detecta rutas en segundo plano tras abrir la app una vez. Requiere Ubicación → Siempre en iPhone.',
     notifications: 'Notificaciones',
     serviceReminders: 'Recordatorios de servicio',
+    rideNotifications: 'Inicio y fin de ruta',
+    rideNotificationsHint:
+      'Notificación del sistema al iniciar o terminar una ruta (también con la app cerrada).',
+    transportAlerts: 'Alertas coche / bus / a pie',
+    transportAlertsHint:
+      'Avisa si el movimiento parece bus o caminar con detección activa — pausa al dejar la moto.',
     everyKm: 'Cada (km)',
     everyDays: 'Cada (días)',
     data: 'Datos',

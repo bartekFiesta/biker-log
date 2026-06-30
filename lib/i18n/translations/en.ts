@@ -60,6 +60,16 @@ const en = {
     dueSoonTitle: 'Service due soon',
     rideStartedTitle: 'Ride started',
     rideStartedBody: 'Auto-detection started recording your ride.',
+    rideEndedTitle: 'Ride saved',
+    rideEndedBody: 'Distance: {{distance}}',
+    passengerTransportTitle: 'Car or bus?',
+    passengerTransportBody:
+      'Movement looks like a vehicle, not your parked motorcycle. Pause ride detection on the dashboard.',
+    passengerTransportBodyRecording:
+      'Movement looks like a vehicle. Stop the ride or pause detection if you left the bike.',
+    walkingWhileRecordingTitle: 'Still recording?',
+    walkingWhileRecordingBody:
+      'Slow movement for several minutes — stop the ride if you are walking (e.g. after a bus).',
   },
   onboarding: {
     heading: 'Welcome to Biker Log',
@@ -113,6 +123,9 @@ const en = {
     autoRideHint: 'Open the app once; rides log automatically. Auto-stops after 5 min parked (below 8 km/h). Pause when in a car or bus.',
     pauseDetection: 'Pause auto-detection (car/bus)',
     resumeDetection: 'Resume auto-detection',
+    passengerTransportBanner:
+      'Possible car/bus travel — pause detection if the motorcycle is parked',
+    walkingTransportBanner: 'Slow walking detected while recording — stop ride if you are not riding',
     manualStart: 'Manual start (optional)',
   },
   settings: {
@@ -137,6 +150,11 @@ const en = {
       'Detects rides with the app in the background after you opened it once. Requires Location → Always on iPhone.',
     notifications: 'Notifications',
     serviceReminders: 'Service reminders',
+    rideNotifications: 'Ride start & end',
+    rideNotificationsHint: 'System notification when a ride starts or auto-stops (also when app is closed).',
+    transportAlerts: 'Car / bus / walking alerts',
+    transportAlertsHint:
+      'Warns if movement looks like a bus or walking while detection is on — pause detection when you leave the bike.',
     everyKm: 'Every (km)',
     everyDays: 'Every (days)',
     data: 'Data',

@@ -26,7 +26,7 @@ import { exportAllDataCsv } from '@/lib/export';
 import { importCsvFromPicker } from '@/lib/import-csv';
 import { useI18n } from '@/lib/i18n/context';
 import type { AppLanguage } from '@/lib/i18n';
-import { refreshServiceNotifications } from '@/lib/notifications';
+import { refreshServiceNotifications, requestNotificationPermissions } from '@/lib/notifications';
 import {
   REMINDER_SERVICE_TYPES,
   type DistanceUnit,
@@ -49,6 +49,8 @@ export default function SettingsScreen() {
   const [autoStartRides, setAutoStartRides] = useState(false);
   const [backgroundAutoStart, setBackgroundAutoStart] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [rideNotificationsEnabled, setRideNotificationsEnabled] = useState(true);
+  const [transportAlertsEnabled, setTransportAlertsEnabled] = useState(true);
   const [reminderRules, setReminderRules] = useState<ServiceReminderRule[]>([]);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -72,6 +74,8 @@ export default function SettingsScreen() {
     setAutoStartRides(settings.auto_start_rides);
     setBackgroundAutoStart(settings.background_auto_start);
     setNotificationsEnabled(settings.notifications_enabled);
+    setRideNotificationsEnabled(settings.ride_notifications_enabled);
+    setTransportAlertsEnabled(settings.transport_alerts_enabled);
     setReminderRules(rules);
   }, []);
 
@@ -86,6 +90,8 @@ export default function SettingsScreen() {
       auto_start_rides: boolean;
       background_auto_start: boolean;
       notifications_enabled: boolean;
+      ride_notifications_enabled: boolean;
+      transport_alerts_enabled: boolean;
     }>
   ) => {
     await updateSettings(patch);
@@ -122,6 +128,24 @@ export default function SettingsScreen() {
   const handleNotificationsChange = (value: boolean) => {
     setNotificationsEnabled(value);
     void persistToggleSettings({ notifications_enabled: value }).catch(() => {
+      void load();
+      Alert.alert(t('common.error'), t('settings.saveFailed'));
+    });
+  };
+
+  const handleRideNotificationsChange = (value: boolean) => {
+    setRideNotificationsEnabled(value);
+    if (value) void requestNotificationPermissions();
+    void persistToggleSettings({ ride_notifications_enabled: value }).catch(() => {
+      void load();
+      Alert.alert(t('common.error'), t('settings.saveFailed'));
+    });
+  };
+
+  const handleTransportAlertsChange = (value: boolean) => {
+    setTransportAlertsEnabled(value);
+    if (value) void requestNotificationPermissions();
+    void persistToggleSettings({ transport_alerts_enabled: value }).catch(() => {
       void load();
       Alert.alert(t('common.error'), t('settings.saveFailed'));
     });
@@ -175,6 +199,8 @@ export default function SettingsScreen() {
       auto_start_rides: autoStartRides,
       background_auto_start: backgroundAutoStart,
       notifications_enabled: notificationsEnabled,
+      ride_notifications_enabled: rideNotificationsEnabled,
+      transport_alerts_enabled: transportAlertsEnabled,
       app_language: language,
     });
     for (const rule of reminderRules) {
@@ -317,6 +343,18 @@ export default function SettingsScreen() {
         hint={t('settings.notificationsHint')}
         value={notificationsEnabled}
         onChange={handleNotificationsChange}
+      />
+      <ToggleRow
+        label={t('settings.rideNotifications')}
+        hint={t('settings.rideNotificationsHint')}
+        value={rideNotificationsEnabled}
+        onChange={handleRideNotificationsChange}
+      />
+      <ToggleRow
+        label={t('settings.transportAlerts')}
+        hint={t('settings.transportAlertsHint')}
+        value={transportAlertsEnabled}
+        onChange={handleTransportAlertsChange}
       />
 
       <Text style={styles.sectionTitle}>{t('settings.serviceReminders')}</Text>

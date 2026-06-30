@@ -140,6 +140,16 @@ async function migrateSettingsTable(db: SQLite.SQLiteDatabase): Promise<void> {
   if (!names.has('notifications_enabled')) {
     await db.execAsync('ALTER TABLE settings ADD COLUMN notifications_enabled INTEGER NOT NULL DEFAULT 1');
   }
+  if (!names.has('ride_notifications_enabled')) {
+    await db.execAsync(
+      'ALTER TABLE settings ADD COLUMN ride_notifications_enabled INTEGER NOT NULL DEFAULT 1'
+    );
+  }
+  if (!names.has('transport_alerts_enabled')) {
+    await db.execAsync(
+      'ALTER TABLE settings ADD COLUMN transport_alerts_enabled INTEGER NOT NULL DEFAULT 1'
+    );
+  }
   if (!names.has('parked_lat')) {
     await db.execAsync('ALTER TABLE settings ADD COLUMN parked_lat REAL');
   }
@@ -298,6 +308,8 @@ function mapSettings(row: Record<string, unknown>): Settings {
     background_auto_start: Boolean(row.background_auto_start ?? 0),
     ride_detection_paused: Boolean(row.ride_detection_paused ?? 0),
     notifications_enabled: Boolean(row.notifications_enabled ?? 1),
+    ride_notifications_enabled: Boolean(row.ride_notifications_enabled ?? 1),
+    transport_alerts_enabled: Boolean(row.transport_alerts_enabled ?? 1),
     onboarding_complete: Boolean(row.onboarding_complete ?? 0),
     parked_lat: (row.parked_lat as number | null) ?? null,
     parked_lng: (row.parked_lng as number | null) ?? null,
@@ -383,7 +395,8 @@ export async function updateSettings(partial: Partial<Omit<Settings, 'id'>>): Pr
   await db.runAsync(
     `UPDATE settings SET active_bike_id = ?, currency = ?, distance_unit = ?, volume_unit = ?,
      app_language = ?, auto_start_rides = ?, background_auto_start = ?, ride_detection_paused = ?,
-     notifications_enabled = ?, onboarding_complete = ?,
+     notifications_enabled = ?, ride_notifications_enabled = ?, transport_alerts_enabled = ?,
+     onboarding_complete = ?,
      parked_lat = ?, parked_lng = ?, parked_at = ? WHERE id = 1`,
     next.active_bike_id,
     next.currency,
@@ -394,6 +407,8 @@ export async function updateSettings(partial: Partial<Omit<Settings, 'id'>>): Pr
     next.background_auto_start ? 1 : 0,
     next.ride_detection_paused ? 1 : 0,
     next.notifications_enabled ? 1 : 0,
+    next.ride_notifications_enabled ? 1 : 0,
+    next.transport_alerts_enabled ? 1 : 0,
     next.onboarding_complete ? 1 : 0,
     next.parked_lat,
     next.parked_lng,

@@ -3,6 +3,7 @@ import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 
 import { getRefuelings, getRides, getServiceRecords } from './db';
+import { buildGpsGapByRideId, rideRouteEndpoints } from './ride-gps';
 import { SERVICE_TYPE_LABELS } from './types';
 
 function csvEscape(value: string | number | boolean | null | undefined): string {
@@ -28,19 +29,44 @@ export async function exportAllDataCsv(): Promise<void> {
     getServiceRecords(),
   ]);
 
+  const gpsGaps = buildGpsGapByRideId(rides);
+
   const ridesCsv = toCsv(
-    ['id', 'started_at', 'ended_at', 'distance_gps_km', 'odometer_start', 'odometer_end', 'paused_duration_ms', 'label', 'tolls_cost'],
-    rides.map((ride) => [
-      ride.id,
-      ride.started_at,
-      ride.ended_at,
-      ride.distance_gps_km,
-      ride.odometer_start,
-      ride.odometer_end,
-      ride.paused_duration_ms,
-      ride.label,
-      ride.tolls_cost,
-    ])
+    [
+      'id',
+      'started_at',
+      'ended_at',
+      'distance_gps_km',
+      'start_lat',
+      'start_lng',
+      'end_lat',
+      'end_lng',
+      'gps_gap_from_prev_m',
+      'odometer_start',
+      'odometer_end',
+      'paused_duration_ms',
+      'label',
+      'tolls_cost',
+    ],
+    rides.map((ride) => {
+      const endpoints = rideRouteEndpoints(ride.route_points);
+      return [
+        ride.id,
+        ride.started_at,
+        ride.ended_at,
+        ride.distance_gps_km,
+        endpoints.start_lat,
+        endpoints.start_lng,
+        endpoints.end_lat,
+        endpoints.end_lng,
+        gpsGaps.get(ride.id) ?? null,
+        ride.odometer_start,
+        ride.odometer_end,
+        ride.paused_duration_ms,
+        ride.label,
+        ride.tolls_cost,
+      ];
+    })
   );
 
   const fuelCsv = toCsv(

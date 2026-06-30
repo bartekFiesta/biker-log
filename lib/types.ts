@@ -34,6 +34,8 @@ export interface Settings {
   background_auto_start: boolean;
   ride_detection_paused: boolean;
   notifications_enabled: boolean;
+  ride_notifications_enabled: boolean;
+  transport_alerts_enabled: boolean;
   onboarding_complete: boolean;
   parked_lat: number | null;
   parked_lng: number | null;

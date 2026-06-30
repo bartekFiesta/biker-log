@@ -24,6 +24,10 @@ import { computeFuelStatus } from '@/lib/fuel-calculations';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { useI18n } from '@/lib/i18n/context';
 import { refreshServiceNotifications } from '@/lib/notifications';
+import {
+  passengerTransportDetector,
+  type TransportSuspicion,
+} from '@/lib/passenger-transport-detector';
 import { rideTracker } from '@/lib/ride-tracker';
 import { computeServiceReminders } from '@/lib/service-reminders';
 import {
@@ -41,6 +45,7 @@ export default function DashboardScreen() {
   const [activeRide, setActiveRide] = useState(false);
   const [activeRidePaused, setActiveRidePaused] = useState(false);
   const [detectionPaused, setDetectionPaused] = useState(false);
+  const [transportSuspicion, setTransportSuspicion] = useState<TransportSuspicion>('none');
   const [bikeName, setBikeName] = useState('');
   const [parkedAt, setParkedAt] = useState<string | null>(null);
   const [parkedCoords, setParkedCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -152,6 +157,10 @@ export default function DashboardScreen() {
       if (snapshot.state === 'idle') refresh();
     });
   }, [refresh]);
+
+  useEffect(() => {
+    return passengerTransportDetector.subscribe(setTransportSuspicion);
+  }, []);
 
   const openParkedLocation = () => {
     if (!parkedCoords) return;
@@ -276,6 +285,18 @@ export default function DashboardScreen() {
         <Text style={styles.infoHint}>{t('dashboard.autoRideHint')}</Text>
       </View>
 
+      {!detectionPaused && transportSuspicion === 'vehicle_passenger' ? (
+        <View style={[styles.infoBox, styles.warningBox]}>
+          <Text style={styles.warningText}>{t('dashboard.passengerTransportBanner')}</Text>
+        </View>
+      ) : null}
+
+      {activeRide && transportSuspicion === 'walking' ? (
+        <View style={[styles.infoBox, styles.warningBox]}>
+          <Text style={styles.warningText}>{t('dashboard.walkingTransportBanner')}</Text>
+        </View>
+      ) : null}
+
       {!activeRide ? (
         <PrimaryButton
           label={
@@ -366,5 +387,14 @@ const styles = StyleSheet.create({
   },
   rideStatusBox: {
     borderColor: Colors.dark.tint,
+  },
+  warningBox: {
+    borderColor: Colors.dark.tint,
+    backgroundColor: 'rgba(255, 107, 53, 0.12)',
+  },
+  warningText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.dark.tint,
   },
 });

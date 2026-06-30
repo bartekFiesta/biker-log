@@ -1,19 +1,17 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { isNative } from './platform';
-import { autoRideDetector } from './auto-ride-detector';
-import { syncRideDetection, setRideDetectionPaused, requestRideLocationPermissions } from './ride-detection';
-import { createTranslator } from './i18n';
+import { syncRideDetection, requestRideLocationPermissions } from './ride-detection';
 import {
   getLatestOdometer,
   getServiceRecords,
   getServiceReminderRules,
-  getSettings,
   getDatabase,
 } from './db';
-import { refreshServiceNotifications } from './notifications';
+import { refreshServiceNotifications, requestNotificationPermissions } from './notifications';
 import { rideTracker } from './ride-tracker';
+import type { RideRecordingState } from './types';
 
 interface DatabaseContextValue {
   ready: boolean;
@@ -40,6 +38,7 @@ async function bootstrapAppData(): Promise<void> {
 export function DatabaseProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const rideStateRef = useRef<RideRecordingState>('idle');
 
   const refresh = () => setRefreshKey((k) => k + 1);
 
@@ -59,17 +58,17 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
         // Keep app usable even if ride restore fails.
       }
       await requestRideLocationPermissions();
+      await requestNotificationPermissions();
       await bootstrapAppData();
       if (mounted) setReady(true);
     })();
 
-    const unsubscribe = autoRideDetector.subscribe(() => {
-      void (async () => {
-        const settings = await getSettings();
-        const t = createTranslator(settings.app_language ?? 'en');
-        Alert.alert(t('reminders.rideStartedTitle'), t('reminders.rideStartedBody'));
+    const unsubscribe = rideTracker.subscribe((snapshot) => {
+      if (snapshot.state === rideStateRef.current) return;
+      rideStateRef.current = snapshot.state;
+      if (snapshot.state === 'recording' || snapshot.state === 'idle') {
         setRefreshKey((k) => k + 1);
-      })();
+      }
     });
 
     return () => {

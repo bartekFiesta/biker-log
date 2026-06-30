@@ -12,6 +12,8 @@ import {
   RIDE_STOP_SPEED_KMH,
   speedKmhFromMps,
 } from './ride-speed';
+import { sendRideEndedNotification, sendRideStartedNotification } from './notifications';
+import { passengerTransportDetector } from './passenger-transport-detector';
 import type { RideRecordingState, RoutePoint } from './types';
 
 export const ACTIVE_RIDE_TASK = 'active-ride-tracking';
@@ -381,6 +383,7 @@ export class RideTracker {
     this.notify();
 
     await updateRideRoute(this.rideId, this.points, routeDistanceKm(this.points));
+    passengerTransportDetector.update(location, 'recording');
     void this.checkAutoStop(location);
   }
 
@@ -465,6 +468,7 @@ export class RideTracker {
       await this.seedCurrentLocation();
     }
     this.notify();
+    void sendRideStartedNotification();
     return ride.id;
   }
 
@@ -560,6 +564,8 @@ export class RideTracker {
     const pausedDurationMs = this.pausedDurationMs;
     const rideId = this.rideId;
     await finishRide(rideId, this.points, distance, odometerEnd, pausedDurationMs, label, tollsCost);
+
+    void sendRideEndedNotification(distance);
 
     this.rideId = null;
     this.points = [];

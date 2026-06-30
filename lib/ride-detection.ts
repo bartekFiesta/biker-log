@@ -1,6 +1,7 @@
 import { autoRideDetector } from './auto-ride-detector';
 import { stopBackgroundRideDetection, syncBackgroundRideDetection } from './background-location';
 import { getSettings, updateSettings } from './db';
+import { resetPassengerTransportDetector } from './passenger-transport-detector';
 import { rideTracker } from './ride-tracker';
 
 export async function syncRideDetection(): Promise<void> {
@@ -29,6 +30,9 @@ export async function syncRideDetection(): Promise<void> {
 
 export async function setRideDetectionPaused(paused: boolean): Promise<void> {
   await updateSettings({ ride_detection_paused: paused });
+  if (paused) {
+    resetPassengerTransportDetector();
+  }
   await syncRideDetection();
 }
 
