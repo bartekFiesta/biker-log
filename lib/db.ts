@@ -481,13 +481,44 @@ export async function getRide(id: number): Promise<Ride | null> {
 }
 
 export async function getActiveRide(): Promise<Ride | null> {
+  await consolidateDuplicateActiveRides();
   const bikeId = await getActiveBikeId();
   const db = await getDatabase();
   const row = await db.getFirstAsync<Record<string, unknown>>(
-    'SELECT * FROM rides WHERE ended_at IS NULL AND bike_id = ? ORDER BY started_at DESC LIMIT 1',
+    'SELECT * FROM rides WHERE ended_at IS NULL AND bike_id = ? ORDER BY id DESC LIMIT 1',
     bikeId
   );
   return row ? mapRide(row) : null;
+}
+
+/** Finishes extra in-progress rides left by concurrent auto-start (keeps newest). */
+export async function consolidateDuplicateActiveRides(): Promise<void> {
+  const bikeId = await getActiveBikeId();
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<Record<string, unknown>>(
+    'SELECT * FROM rides WHERE ended_at IS NULL AND bike_id = ? ORDER BY id DESC',
+    bikeId
+  );
+  if (rows.length <= 1) return;
+
+  const rides = rows.map(mapRide);
+  const [primary, ...orphans] = rides;
+
+  for (const orphan of orphans) {
+    const odometerEnd =
+      orphan.odometer_start != null
+        ? orphan.odometer_start + orphan.distance_gps_km
+        : null;
+    await finishRide(
+      orphan.id,
+      orphan.route_points,
+      orphan.distance_gps_km,
+      odometerEnd,
+      orphan.paused_duration_ms,
+      null,
+      null
+    );
+  }
 }
 
 export async function createRide(odometerStart: number | null, bikeId?: number): Promise<Ride> {

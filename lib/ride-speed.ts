@@ -12,6 +12,9 @@ export const AUTO_STOP_IDLE_MS = 5 * 60 * 1000;
 /** Ignore auto-stop until the ride has been active this long (avoids GPS glitches). */
 export const MIN_RIDE_BEFORE_AUTO_STOP_MS = 60 * 1000;
 
+/** When GPS speed is missing, treat as parked if position stays within this radius (m). */
+export const AUTO_STOP_STATIONARY_RADIUS_M = 30;
+
 export function computeRideSpeedStats(points: RoutePoint[]): RideSpeedStats | null {
   const speeds = points
     .map((point) => point.speed_kmh)
